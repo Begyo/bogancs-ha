@@ -31,7 +31,7 @@ mutatná, hogy megtörtént-e már.
 ## Telepítés HACS-ból
 
 1. HACS → jobb felül a három pont → *Custom repositories*
-2. A repó címe, kategória: *Integration*
+2. Add meg: `https://github.com/Begyo/bogancs-ha`, kategória: *Integration*
 3. Keresd meg a listában a *Bogáncs kisállatkönyv* elemet, és telepítsd
 4. Indítsd újra a Home Assistantet
 5. *Beállítások → Eszközök és szolgáltatások → Integráció hozzáadása → Bogáncs*
