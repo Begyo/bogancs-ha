@@ -4,12 +4,12 @@
       "user": {
         "title": "Bogáncs pet book",
         "description": "Open the app, Settings, Home Assistant, and copy the code here.",
-        "data": { "api_key": "Code", "url": "Address" }
+        "data": { "api_key": "Access code", "url": "Address" }
       },
       "reauth_confirm": {
         "title": "A new code is needed",
         "description": "The previous code is no longer valid. Generate a new one in the app and paste it here.",
-        "data": { "api_key": "Code" }
+        "data": { "api_key": "Access code" }
       }
     },
     "error": {

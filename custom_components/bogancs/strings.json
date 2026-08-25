@@ -4,12 +4,12 @@
       "user": {
         "title": "Bogáncs kisállatkönyv",
         "description": "Nyisd meg az appot, Beállítások, Home Assistant, és másold ide a kódot.",
-        "data": { "api_key": "Kód", "url": "Cím" }
+        "data": { "api_key": "Hozzáférési kód", "url": "Cím" }
       },
       "reauth_confirm": {
         "title": "Új kód kell",
         "description": "A korábbi kód már nem érvényes. Generálj újat az appban, és másold ide.",
-        "data": { "api_key": "Kód" }
+        "data": { "api_key": "Hozzáférési kód" }
       }
     },
     "error": {
