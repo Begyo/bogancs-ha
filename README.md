@@ -1,8 +1,10 @@
 # Bogáncs kisállatkönyv – Home Assistant integráció
 
 A [Bogáncs kisállatkönyv](https://kisallatkonyv.hu/) napi gyógyszerezését és napi rutinját
-hozza be a Home Assistantbe. Telepítés után egyetlen dolgot kell megadnod: a kódot, amit
+hozza be a Home Assistantba. Telepítés után egyetlen dolgot kell megadnod: a kódot, amit
 az appban generálsz.
+
+> **Zárt próbaüzem.** A kisallatkonyv.hu jelenleg zárt próbaüzemben működik.
 
 ## Mit ad
 
@@ -21,9 +23,6 @@ Minden beütemezett adaghoz egy kapcsoló: bekapcsolva = beadva, kikapcsolva = m
 A visszakapcsolás visszavonja a beadást, ugyanúgy, mint az appban. A kapcsoló attribútumai
 megmondják, ki és mikor adta be.
 
-Azért kapcsoló és nem gomb: egy gomb csak annyit tudna, hogy „megtörtént", de sosem
-mutatná, hogy megtörtént-e már.
-
 **Szolgáltatás**
 
 `bogancs.dose` – automatizálásból jelölhetsz be egy adagot, vagy vonhatsz vissza egyet.
@@ -41,7 +40,7 @@ mutatná, hogy megtörtént-e már.
 Másold a `custom_components/bogancs` mappát a Home Assistant `config/custom_components`
 mappájába, majd indítsd újra.
 
-## A kód
+## Hozzáférési kód
 
 Az appban: *Beállítások → Home Assistant → Kód készítése*. A kód a családodhoz tartozik,
 és csak a saját családod adatait éri el. Bármikor lecserélheted; a régi azonnal érvénytelen
