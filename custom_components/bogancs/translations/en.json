@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bogáncs pet book",
+        "description": "Open the app, Settings, Home Assistant, and copy the code here.",
+        "data": { "api_key": "Code", "url": "Address" }
+      },
+      "reauth_confirm": {
+        "title": "A new code is needed",
+        "description": "The previous code is no longer valid. Generate a new one in the app and paste it here.",
+        "data": { "api_key": "Code" }
+      }
+    },
+    "error": {
+      "invalid_auth": "The server did not accept this code.",
+      "cannot_connect": "Could not reach the server."
+    },
+    "abort": {
+      "already_configured": "This family is already set up.",
+      "reauth_successful": "The new code works."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pending": { "name": "Doses left" },
+      "overdue": { "name": "Overdue" },
+      "next": { "name": "Next dose" },
+      "routine": { "name": "Daily routine" }
+    }
+  }
+}

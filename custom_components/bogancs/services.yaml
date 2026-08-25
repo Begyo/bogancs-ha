@@ -1,0 +1,34 @@
+dose:
+  name: Adag beadva
+  description: >-
+    Megjelöli az adagot beadottként, vagy visszavonja. Automatizálásból hívható,
+    például amikor a gyógyszeres doboz érzékelője jelez.
+  fields:
+    medication:
+      name: Gyógyszer azonosítója
+      description: A gyógyszer azonosítója. A "Mai adagok" szenzor doses attribútumában találod.
+      required: true
+      example: "abc123def456ghi"
+      selector:
+        text:
+    scheduled:
+      name: Időpont
+      description: A beütemezett időpont (óó:pp). Üresen hagyva eseti beadásként rögzül.
+      required: false
+      example: "08:00"
+      selector:
+        text:
+    given:
+      name: Beadva
+      description: Igaz = beadva, hamis = a beadás visszavonása.
+      required: false
+      default: true
+      selector:
+        boolean:
+    by:
+      name: Ki adta be
+      description: Ez a név kerül a naplóba.
+      required: false
+      default: "Home Assistant"
+      selector:
+        text:

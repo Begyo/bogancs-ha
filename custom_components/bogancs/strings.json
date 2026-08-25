@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bogáncs kisállatkönyv",
+        "description": "Nyisd meg az appot, Beállítások, Home Assistant, és másold ide a kódot.",
+        "data": { "api_key": "Kód", "url": "Cím" }
+      },
+      "reauth_confirm": {
+        "title": "Új kód kell",
+        "description": "A korábbi kód már nem érvényes. Generálj újat az appban, és másold ide.",
+        "data": { "api_key": "Kód" }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ezt a kódot a szerver nem fogadta el.",
+      "cannot_connect": "Nem sikerült elérni a szervert."
+    },
+    "abort": {
+      "already_configured": "Ez a család már be van kötve.",
+      "reauth_successful": "Az új kód működik."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pending": { "name": "Hátralévő adagok" },
+      "overdue": { "name": "Késésben" },
+      "next": { "name": "Következő adag" },
+      "routine": { "name": "Napi rutin" }
+    }
+  }
+}
