@@ -67,6 +67,12 @@ automation:
             {{ states('sensor.csalad_kesesben') }} adag késésben van.
 ```
 
+## Ikonok
+
+Az integráció a saját ikonjait hozza magával (a custom_components/bogancs/brand mappában), külön
+világos és sötét témához. Ehhez Home Assistant 2026.3 vagy újabb kell; korábbi verzión
+általános ikon látszik.
+
 ## Licenc
 
 MIT
