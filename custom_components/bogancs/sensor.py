@@ -1,4 +1,12 @@
-"""Sensors: what is still due today, what is late, and what comes next."""
+"""Sensors: what is still due today, what is late, what comes next -- and what needs
+attention beyond the medicine cabinet.
+
+2026-09-04 (Begyo): the daily routine sensor is gone. A routine is a list a person reads in
+the app; it never changed on its own, so a dashboard tile for it only repeated what was
+already written down. What belongs on a wall panel is the time-bound and the alarming:
+appointments, a hazard reported nearby, someone's lost pet in the neighbourhood, and a
+supply about to run out. Those change without anyone opening the app.
+"""
 
 from __future__ import annotations
 
@@ -37,6 +45,16 @@ def _next_extra(data: dict[str, Any]) -> dict[str, Any]:
     return {"pet": nxt.get("pet", ""), "medication": nxt.get("med", "")}
 
 
+def _lista(data: dict[str, Any], kulcs: str) -> list[Any]:
+    """One list out of the payload, defensively.
+
+    An older server does not send the new keys at all, and a missing key must read as
+    "nothing to show", not as a crash in the coordinator.
+    """
+    ertek = data.get(kulcs)
+    return ertek if isinstance(ertek, list) else []
+
+
 SENSORS: tuple[BogancsSensorDescription, ...] = (
     BogancsSensorDescription(
         key="pending",
@@ -69,13 +87,51 @@ SENSORS: tuple[BogancsSensorDescription, ...] = (
         value=_next_value,
         extra=_next_extra,
     ),
+    # A time-bound list: vet and grooming appointments in the next seven days. The state is
+    # the count so an automation can gate on it; the whole list travels as an attribute so a
+    # card renders without a second request. `next` is broken out because that is what a
+    # single-line tile wants to show.
     BogancsSensorDescription(
-        key="routine",
-        translation_key="routine",
-        icon="mdi:white-balance-sunny",
-        native_unit_of_measurement="teendő",
-        value=lambda d: len(d.get("routine") or []),
-        extra=lambda d: {"items": d.get("routine", [])},
+        key="appointments",
+        translation_key="appointments",
+        icon="mdi:calendar-clock",
+        native_unit_of_measurement="időpont",
+        value=lambda d: len(_lista(d, "appointments")),
+        extra=lambda d: {
+            "items": _lista(d, "appointments"),
+            "next": d.get("appointment_next"),
+        },
+    ),
+    # Hazards reported nearby. The server already applied the family's radius and dropped
+    # anything expired or held back by moderation; the distance is rounded, and no address
+    # or coordinate ever reaches the integration.
+    BogancsSensorDescription(
+        key="hazards",
+        translation_key="hazards",
+        icon="mdi:alert-outline",
+        native_unit_of_measurement="jelzés",
+        value=lambda d: len(_lista(d, "hazards")),
+        extra=lambda d: {"items": _lista(d, "hazards")},
+    ),
+    # Somebody else's lost pet in the neighbourhood. Never your own: the server filters the
+    # family out, otherwise the panel would report your own animal back to you.
+    BogancsSensorDescription(
+        key="lost_nearby",
+        translation_key="lost_nearby",
+        icon="mdi:map-marker-alert-outline",
+        native_unit_of_measurement="állat",
+        value=lambda d: len(_lista(d, "lost_nearby")),
+        extra=lambda d: {"items": _lista(d, "lost_nearby")},
+    ),
+    # Food and medicine running low, with the same arithmetic the app and the morning
+    # summary use -- a panel that disagreed with the phone would be worse than no panel.
+    BogancsSensorDescription(
+        key="stock",
+        translation_key="stock",
+        icon="mdi:package-variant",
+        native_unit_of_measurement="tétel",
+        value=lambda d: len(_lista(d, "stock")),
+        extra=lambda d: {"items": _lista(d, "stock")},
     ),
 )
 

@@ -4,12 +4,17 @@
       "user": {
         "title": "Bogáncs pet book",
         "description": "Open the app, Settings, Home Assistant, and copy the code here.",
-        "data": { "api_key": "Access code", "url": "Address" }
+        "data": {
+          "api_key": "Access code",
+          "url": "Address"
+        }
       },
       "reauth_confirm": {
         "title": "A new code is needed",
         "description": "The previous code is no longer valid. Generate a new one in the app and paste it here.",
-        "data": { "api_key": "Access code" }
+        "data": {
+          "api_key": "Access code"
+        }
       }
     },
     "error": {
@@ -23,10 +28,27 @@
   },
   "entity": {
     "sensor": {
-      "pending": { "name": "Doses left" },
-      "overdue": { "name": "Overdue" },
-      "next": { "name": "Next dose" },
-      "routine": { "name": "Daily routine" }
+      "pending": {
+        "name": "Doses left"
+      },
+      "overdue": {
+        "name": "Overdue"
+      },
+      "next": {
+        "name": "Next dose"
+      },
+      "appointments": {
+        "name": "Appointments"
+      },
+      "hazards": {
+        "name": "Hazards nearby"
+      },
+      "lost_nearby": {
+        "name": "Lost pet nearby"
+      },
+      "stock": {
+        "name": "Running low"
+      }
     }
   }
 }
