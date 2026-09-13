@@ -73,6 +73,12 @@ Az integráció a saját ikonjait hozza magával (a custom_components/bogancs/br
 világos és sötét témához. Ehhez Home Assistant 2026.3 vagy újabb kell; korábbi verzión
 általános ikon látszik.
 
+## Változások
+
+Minden kiadás szerepel a [CHANGELOG.md](CHANGELOG.md) fájlban, és GitHub kiadásként is,
+így a Home Assistant frissítési kártyáján a verziószám mellett a „kiadási megjegyzések”
+hivatkozás is azt mutatja, mi változott az előző verzióhoz képest.
+
 ## Licenc
 
 MIT
