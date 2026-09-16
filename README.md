@@ -59,8 +59,21 @@ type: custom:bogancs-doses
 
 ## Telepítés kézzel
 
-Másold a `custom_components/bogancs` mappát a Home Assistant `config/custom_components`
-mappájába, majd indítsd újra.
+Töltsd le a repó tartalmát, és másold át a `custom_components/bogancs` mappát úgy, hogy a
+Home Assistant konfigurációs mappájában ez legyen a végeredmény:
+
+```
+<Home Assistant konfigurációs mappa>/
+└── custom_components/
+    └── bogancs/
+        ├── __init__.py
+        ├── manifest.json
+        └── ...
+```
+
+A konfigurációs mappa Home Assistant OS és konténeres telepítés esetén `/config`, Core
+telepítésnél jellemzően `~/.homeassistant`. Ha a `custom_components` könyvtár még nem létezik,
+hozd létre. Végül indítsd újra a Home Assistantet.
 
 ## Hozzáférési kód
 
