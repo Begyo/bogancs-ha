@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import voluptuous as vol
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.loader import async_get_integration
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -24,6 +29,9 @@ from .coordinator import BogancsAuthError, BogancsCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
+CARD_URL = "/bogancs_static/bogancs-card.js"
+CARD_FILE = "bogancs-card.js"
+
 DOSE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_MEDICATION): cv.string,
@@ -34,8 +42,35 @@ DOSE_SCHEMA = vol.Schema(
 )
 
 
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Serve our own Lovelace card, so the integration is complete on its own.
+
+    Begyo, 2026-09-16: "Az integracio telepitesevel mindenkinek komplett, jol mukodo megoldast
+    kell nyujtani. Nem irhatjuk oda, hogy ahhoz hogy mukodjon, telepitsd meg ezt meg azt."
+    Until now the dose list on a dashboard needed three separate HACS front-end add-ons
+    (mushroom, card-mod, config-template-card), and the template card rebuilt the whole list on
+    every state change -- the screen flashed and the scroll position jumped back to the top.
+    The card shipped here has no external dependency and updates one row at a time.
+    """
+    if hass.data.get(DOMAIN, {}).get("_card_registered"):
+        return
+    path = Path(__file__).parent / "www" / CARD_FILE
+    if not path.is_file():
+        return
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(path), True)]
+    )
+    # A cache-buster the browser can see: without it a returning user keeps the old card
+    # after an update, and the fix looks like it never shipped. The version comes from the
+    # manifest, so it can never drift from what HACS reports.
+    integration = await async_get_integration(hass, DOMAIN)
+    add_extra_js_url(hass, f"{CARD_URL}?v={integration.version}")
+    hass.data.setdefault(DOMAIN, {})["_card_registered"] = True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up one family from a config entry."""
+    await _async_register_card(hass)
     coordinator = BogancsCoordinator(
         hass, entry.data.get(CONF_URL, DEFAULT_URL), entry.data[CONF_KEY]
     )
@@ -70,6 +105,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        if not hass.data[DOMAIN]:
+        # A kartya-jelzo nem config entry, ezert kulon kezeljuk: ha mar csak az maradt,
+        # a szolgaltatast le kell venni (kulonben egy fel-elo `bogancs.dose` marad a rendszerben).
+        maradt = [k for k in hass.data[DOMAIN] if k != "_card_registered"]
+        if not maradt:
             hass.services.async_remove(DOMAIN, SERVICE_DOSE)
     return unloaded
