@@ -23,7 +23,9 @@ class BogancsDosesCard extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = Object.assign({ hide_given: false }, config || {});
+    // `hide_header`: a kioszkon mar van sajat fejlec-kartya a szamlaloval, ott a mienk csak
+    // ismetles lenne. Ezert a fejlec elrejtheto, es a kartya CSAK a listat adja.
+    this._config = Object.assign({ hide_given: false, hide_header: false }, config || {});
   }
 
   getCardSize() {
@@ -44,7 +46,8 @@ class BogancsDosesCard extends HTMLElement {
     const a = allapot.attributes || {};
     const adagok = Array.isArray(a.doses) ? a.doses : [];
     if (!this._keret) this._epit();
-    this._fejlec(a, adagok);
+    if (this._config.hide_header) { if (this._fejDoboz) this._fejDoboz.style.display = "none"; this._keret.classList.add("nincs-fej"); }
+    else { if (this._fejDoboz) this._fejDoboz.style.display = ""; this._fejlec(a, adagok); }
     this._lista(adagok);
   }
 
@@ -77,6 +80,7 @@ class BogancsDosesCard extends HTMLElement {
     const stilus = document.createElement("style");
     stilus.textContent = `
       ha-card { padding: 12px 8px 8px; }
+      ha-card.nincs-fej { padding: 6px 8px 8px; }
       .fej { display:flex; align-items:center; gap:10px; padding: 0 10px 8px; }
       .fej .cim { font-size: 1.05rem; font-weight: 600; color: var(--primary-text-color); flex: 1; }
       .fej .szam { font-size: 1.35rem; font-weight: 700; color: var(--primary-text-color); }
@@ -94,6 +98,7 @@ class BogancsDosesCard extends HTMLElement {
     const kartya = document.createElement("ha-card");
     const fej = document.createElement("div");
     fej.className = "fej";
+    this._fejDoboz = fej;
     this._fejIkon = document.createElement("ha-icon");
     this._fejCim = document.createElement("div");
     this._fejCim.className = "cim";
@@ -233,7 +238,7 @@ class BogancsDosesCard extends HTMLElement {
     const uj = !this._vartGiven(d);
     this._varakozo.set(kulcs, uj);
     this._sorFrissit(this._sorok.get(kulcs), d);   // azonnali visszajelzes
-    this._fejlec(allapot.attributes || {}, adagok);
+    if (!this._config.hide_header) this._fejlec(allapot.attributes || {}, adagok);
     this._hass.callService("bogancs", "dose", {
       medication: d.medication,
       scheduled: d.scheduled || "",

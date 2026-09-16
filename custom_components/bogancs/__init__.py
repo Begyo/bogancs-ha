@@ -31,6 +31,11 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 CARD_URL = "/bogancs_static/bogancs-card.js"
 CARD_FILE = "bogancs-card.js"
+# SAJAT KULCS, NEM a hass.data[DOMAIN]-ban: oda kizarolag koordinatorok valok, mert a
+# `bogancs.dose` szolgaltatas vegigmegy az ertekein. 2026-09-16-an egy ide tett boolean
+# miatt a szolgaltatas `'bool' object has no attribute 'async_set_dose'` hibaval elszallt,
+# es a kioszkrol nem lehetett adagot jelolni.
+CARD_FLAG = f"{DOMAIN}_card_registered"
 
 DOSE_SCHEMA = vol.Schema(
     {
@@ -52,7 +57,7 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     every state change -- the screen flashed and the scroll position jumped back to the top.
     The card shipped here has no external dependency and updates one row at a time.
     """
-    if hass.data.get(DOMAIN, {}).get("_card_registered"):
+    if hass.data.get(CARD_FLAG):
         return
     path = Path(__file__).parent / "www" / CARD_FILE
     if not path.is_file():
@@ -65,7 +70,7 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     # manifest, so it can never drift from what HACS reports.
     integration = await async_get_integration(hass, DOMAIN)
     add_extra_js_url(hass, f"{CARD_URL}?v={integration.version}")
-    hass.data.setdefault(DOMAIN, {})["_card_registered"] = True
+    hass.data[CARD_FLAG] = True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -105,9 +110,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        # A kartya-jelzo nem config entry, ezert kulon kezeljuk: ha mar csak az maradt,
-        # a szolgaltatast le kell venni (kulonben egy fel-elo `bogancs.dose` marad a rendszerben).
-        maradt = [k for k in hass.data[DOMAIN] if k != "_card_registered"]
-        if not maradt:
+        if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_DOSE)
     return unloaded
