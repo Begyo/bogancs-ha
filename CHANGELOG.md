@@ -11,6 +11,22 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.3.3 (2026-09-16)
+
+**Javítva a leírásban**
+
+- A *Telepítés kézzel* szakasz mostantól a **végeredményt** írja le mappa-fa alakban, nem a
+  másolás irányát. Megmondja azt is, hol keresd a konfigurációs mappát (Home Assistant OS és
+  konténeres telepítésnél `/config`, Core telepítésnél `~/.homeassistant`), és hogy a
+  `custom_components` könyvtárat létre kell hozni, ha még nincs. A korábbi mondatból nem derült
+  ki egyértelműen, hová kerüljön a mappa.
+
+**Megjegyzés**
+
+- A kód nem változott az előző kiadáshoz képest. Azért lett új kiadás, mert a HACS a leírást
+  ahhoz a kiadáshoz köti, amelyikkel letöltötted: a javítás a v1.3.2 címke után készült el,
+  ezért ott még a régi szöveg látszott.
+
 ## v1.3.2 (2026-09-16)
 
 **Új: az integráció hozza a saját kártyáját**
