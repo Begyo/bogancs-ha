@@ -23,6 +23,28 @@ Minden beütemezett adaghoz egy kapcsoló: bekapcsolva = beadva, kikapcsolva = m
 A visszakapcsolás visszavonja a beadást, ugyanúgy, mint az appban. A kapcsoló attribútumai
 megmondják, ki és mikor adta be.
 
+**Kártya**
+
+Az integráció a saját Lovelace-kártyáját is hozza, külön telepítés nélkül. A kártyaválasztóban
+*Bogáncs – Mai adagok* néven találod. A mai adagok listáját mutatja időrendben, koppintásra
+jelölhető és visszavonható, és magától követi, ha új gyógyszer kerül be.
+
+A lista **soronként** frissül: egy adag megjelölésekor csak az az egy sor vált át, a többihez
+hozzá sem nyúl. Így nem villan a képernyő, és a görgetés is ott marad, ahol volt – egy hosszú
+lista aljáról nem dob vissza a tetejére.
+
+```yaml
+type: custom:bogancs-doses
+```
+
+| Opció | Mit csinál |
+|---|---|
+| `entity` | melyik adag-szenzort olvassa. Elhagyható: magától megtalálja |
+| `title` | a kártya címe (alapból *Mai adagok*) |
+| `hide_header` | `true` esetén csak a lista látszik, fejléc nélkül – ha a vezérlőpulton már van saját számláló |
+| `hide_given` | `true` esetén a már beadott adagok kimaradnak |
+| `by` | ez a név kerül a naplóba a beadás mellé (alapból *Home Assistant*) |
+
 **Szolgáltatás**
 
 `bogancs.dose` – automatizálásból jelölhetsz be egy adagot, vagy vonhatsz vissza egyet.

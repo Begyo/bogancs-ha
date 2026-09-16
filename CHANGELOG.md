@@ -11,6 +11,24 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.3.2 (2026-09-16)
+
+**Új: az integráció hozza a saját kártyáját**
+
+- A kártyaválasztóban megjelenik a *Bogáncs – Mai adagok* kártya. Külön telepíteni nem kell
+  semmit: eddig egy ilyen lista összerakásához három külön front-end kiegészítő kellett.
+- A lista **soronként** frissül. Egy adag megjelölésekor csak az az egy sor vált át, ezért
+  nem villan a képernyő, és a görgetés a helyén marad. A korábbi, sablonból épített
+  megoldások a teljes listát újragyártották minden változásnál, és egy hosszú lista aljáról
+  visszadobtak a tetejére.
+- A koppintás azonnal látszik, a mentés a háttérben fut. Ha a mentés nem sikerül, a sor
+  visszaáll: nem marad a képernyőn olyan pipa, ami mögött nincs mentett adag.
+- Opciók: `entity`, `title`, `hide_header`, `hide_given`, `by`. Részletek a README-ben.
+
+**Megjegyzés a verziószámhoz**
+
+- Az 1.3.0 és 1.3.1 fejlesztés közben keletkezett, kiadás nem készült belőlük.
+
 ## v1.2.1 (2026-09-09)
 
 **Javítva**
