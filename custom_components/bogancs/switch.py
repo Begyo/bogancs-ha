@@ -53,7 +53,6 @@ class BogancsDoseSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
     """A single dose of one medication at one time of day."""
 
     _attr_has_entity_name = True
-    _attr_icon = "mdi:pill"
 
     def __init__(
         self, coordinator: BogancsCoordinator, entry: ConfigEntry, row: dict[str, Any]
@@ -93,6 +92,11 @@ class BogancsDoseSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
         return bool(self._row.get("given"))
 
     @property
+    def icon(self) -> str:
+        # A kimaradt adag ranezesre is masik allapot, ne csak az attributumban legyen ott.
+        return "mdi:pill-off" if self._row.get("missed") else "mdi:pill"
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         row = self._row
         return {
@@ -102,7 +106,16 @@ class BogancsDoseSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
             "scheduled": self._scheduled,
             "given_by": row.get("given_by", ""),
             "given_at": row.get("given_at", ""),
+            # Harmadik allapot: se beadva, se hatravan. Enelkul egy automatizalas nem tudna
+            # kulonbseget tenni "meg nem adtuk be" es "nem kapta meg" kozott.
+            "missed": bool(row.get("missed")),
         }
+
+    async def async_mark_missed(self, reason: str = "") -> None:
+        """Kimaradtnak jelolni ezt az adagot (a szolgaltatason at hivhato)."""
+        await self.coordinator.async_set_dose(
+            self._medication, self._scheduled, False, "Home Assistant", missed=True
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.async_set_dose(

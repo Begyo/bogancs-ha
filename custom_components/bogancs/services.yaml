@@ -25,6 +25,22 @@ dose:
       default: true
       selector:
         boolean:
+    missed:
+      name: Kimaradt
+      description: >-
+        Igaz = az adag KIMARADT (nem kapta meg). Ez erosebb a "Beadva" mezonel: ha be van
+        jelolve, az adag kimaradtkent rogzul, akkor is, ha a Beadva igaz.
+      required: false
+      default: false
+      selector:
+        boolean:
+    reason:
+      name: A kimaradas oka
+      description: Nem kotelezo, a naploba kerul (pl. kihanyta, nem volt itthon).
+      required: false
+      example: "kihányta"
+      selector:
+        text:
     by:
       name: Ki adta be
       description: Ez a név kerül a naplóba.

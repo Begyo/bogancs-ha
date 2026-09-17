@@ -48,6 +48,9 @@
       },
       "stock": {
         "name": "Fogyóban"
+      },
+      "missed": {
+        "name": "Kimaradt ma"
       }
     }
   }

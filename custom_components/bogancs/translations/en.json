@@ -48,6 +48,9 @@
       },
       "stock": {
         "name": "Running low"
+      },
+      "missed": {
+        "name": "Missed today"
       }
     }
   }

@@ -20,6 +20,7 @@ class BogancsDosesCard extends HTMLElement {
     this._sorok = new Map(); // kulcs -> { gyoker, ikon, cim, alcim }
     this._utolso = "";       // az utoljara kirajzolt adatok ujjlenyomata
     this._varakozo = new Map(); // kulcs -> a felhasznalo altal VART allapot, amig a szerver valaszol
+    this._varakozoKimaradt = new Map(); // ugyanez a kimaradas-gombra
   }
 
   setConfig(config) {
@@ -45,6 +46,11 @@ class BogancsDosesCard extends HTMLElement {
     if (!allapot) { this._uresen("Nincs Bogáncs adag-szenzor. Add meg az entitást a kártya beállításában."); return; }
     const a = allapot.attributes || {};
     const adagok = Array.isArray(a.doses) ? a.doses : [];
+    /* A kimaradas-gomb csak akkor jelenik meg, ha a SZERVER is tudja fogadni. A regi
+       kiszolgalo a "missed" mezot nem ismeri, es a given:false-t TORLESNEK veszi -- ott a
+       gomb csendben letorolne a sort ahelyett, hogy kimaradast rogzitene. A jel: az uj
+       allapot mindig kuld "missed" osszesitot es sor-szintu "missed" mezot. */
+    this._tamogatKimaradt = a.missed !== undefined || adagok.some((d) => d.missed !== undefined);
     if (!this._keret) this._epit();
     if (this._config.hide_header) { if (this._fejDoboz) this._fejDoboz.style.display = "none"; this._keret.classList.add("nincs-fej"); }
     else { if (this._fejDoboz) this._fejDoboz.style.display = ""; this._fejlec(a, adagok); }
@@ -93,6 +99,12 @@ class BogancsDosesCard extends HTMLElement {
       .cim2 { font-size: .78rem; color: var(--secondary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .kesik .cim1 { color: var(--error-color); font-weight: 600; }
       .kesz .cim1 { color: var(--secondary-text-color); text-decoration: line-through; }
+      /* A kimaradt adag se nem kesz, se nem hatravan: sajat kepe van, kulonben a ket
+         allapot osszemosodik es a nap teljesnek latszik ugy, hogy az allat nem kapta meg. */
+      .kimaradt .cim1 { color: var(--warning-color, #e8a33d); font-weight: 600; }
+      .kihagy { --mdc-icon-size: 20px; flex: none; border: none; background: none; cursor: pointer;
+                color: var(--secondary-text-color); padding: 4px; border-radius: 8px; }
+      .kihagy:hover { background: var(--secondary-background-color); color: var(--warning-color, #e8a33d); }
       .ures { padding: 14px 12px; color: var(--secondary-text-color); font-size: .9rem; }
     `;
     const kartya = document.createElement("ha-card");
@@ -124,12 +136,18 @@ class BogancsDosesCard extends HTMLElement {
 
   _fejlec(a, adagok) {
     const kesik = adagok.filter((d) => !this._vartGiven(d) && this._kesikE(d)).length;
-    const kesz = adagok.filter((d) => this._vartGiven(d)).length;
+    const kesz = adagok.filter((d) => this._vartGiven(d) && !this._vartKimaradt(d)).length;
+    const kimaradt = adagok.filter((d) => this._vartKimaradt(d)).length;
     const cim = (this._config && this._config.title) || "Mai adagok";
     if (this._fejFo.textContent !== cim) this._fejFo.textContent = cim;
     const szam = kesz + " / " + adagok.length;
     if (this._fejSzam.textContent !== szam) this._fejSzam.textContent = szam;
-    const alcim = kesik > 0 ? (kesik + " késésben") : (kesz === adagok.length && adagok.length ? "mindet megkapta" : "");
+    const reszek = [];
+    if (kesik > 0) reszek.push(kesik + " késésben");
+    if (kimaradt > 0) reszek.push(kimaradt + " kimaradt");
+    const alcim = reszek.length
+      ? reszek.join(" · ")
+      : (kesz === adagok.length && adagok.length ? "mindet megkapta" : "");
     if (this._fejAlcim.textContent !== alcim) this._fejAlcim.textContent = alcim;
     const ikon = kesik > 0 ? "mdi:alert-decagram" : (adagok.length && kesz === adagok.length ? "mdi:check-decagram" : "mdi:pill-multiple");
     if (this._fejIkon.getAttribute("icon") !== ikon) this._fejIkon.setAttribute("icon", ikon);
@@ -150,7 +168,20 @@ class BogancsDosesCard extends HTMLElement {
     return !!d.given;
   }
 
+  _vartKimaradt(d) {
+    const k = this._kulcs(d);
+    if (this._varakozoKimaradt.has(k)) {
+      const vart = this._varakozoKimaradt.get(k);
+      if (!!d.missed === vart) { this._varakozoKimaradt.delete(k); return !!d.missed; }
+      return vart;
+    }
+    return !!d.missed;
+  }
+
   _kesikE(d) {
+    // A kimaradas LEZART allapot: nem keses. Enelkul a fejlec pirosan sirna olyasmiert,
+    // amit mar elintezett valaki.
+    if (this._vartKimaradt(d)) return false;
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(d.scheduled || ""));
     if (!m) return false;
     const most = new Date();
@@ -205,28 +236,68 @@ class BogancsDosesCard extends HTMLElement {
     alcim.className = "cim2";
     szoveg.appendChild(cim);
     szoveg.appendChild(alcim);
+    // A kimaradasnak SAJAT celpontja van, nem a sorra koppintas: a sor beadast rogzit, a
+    // ketto nem fer el ugyanazon a helyen (ugyanez a dontes az appban is).
+    const kihagy = document.createElement("ha-icon");
+    kihagy.className = "kihagy";
+    kihagy.setAttribute("icon", "mdi:alert-outline");
+    kihagy.setAttribute("role", "button");
+    kihagy.setAttribute("title", "Kimaradt");
+    kihagy.addEventListener("click", (ev) => { ev.stopPropagation(); this._kihagy(kulcs); });
     gyoker.appendChild(ikon);
     gyoker.appendChild(szoveg);
+    gyoker.appendChild(kihagy);
     gyoker.addEventListener("click", () => this._koppint(kulcs));
-    return { gyoker, ikon, cim, alcim };
+    return { gyoker, ikon, cim, alcim, kihagy };
   }
 
   _sorFrissit(sor, d) {
     if (!sor) return;
-    const kesz = this._vartGiven(d);
-    const kesik = !kesz && this._kesikE(d);
-    const ikon = kesz ? "mdi:check-circle" : (kesik ? "mdi:alert-circle" : "mdi:circle-outline");
+    const kimaradt = this._vartKimaradt(d);
+    const kesz = !kimaradt && this._vartGiven(d);
+    const kesik = !kesz && !kimaradt && this._kesikE(d);
+    const ikon = kimaradt ? "mdi:pill-off"
+      : (kesz ? "mdi:check-circle" : (kesik ? "mdi:alert-circle" : "mdi:circle-outline"));
     if (sor.ikon.getAttribute("icon") !== ikon) sor.ikon.setAttribute("icon", ikon);
-    const szin = kesz ? "var(--success-color)" : (kesik ? "var(--error-color)" : "var(--state-icon-color)");
+    const szin = kimaradt ? "var(--warning-color, #e8a33d)"
+      : (kesz ? "var(--success-color)" : (kesik ? "var(--error-color)" : "var(--state-icon-color)"));
     if (sor.ikon.style.color !== szin) sor.ikon.style.color = szin;
     const cim = [d.scheduled, d.pet, d.med].filter(Boolean).join("  ·  ");
     if (sor.cim.textContent !== cim) sor.cim.textContent = cim;
-    const alcim = kesz
-      ? ["megkapta", d.given_at || "", d.given_by ? "· " + d.given_by : ""].filter(Boolean).join(" ")
-      : (d.dose || "");
+    // A kimaradasnal nem "megkapta" all, hanem hogy KIMARADT, es ki rogzitette. Ez a ket
+    // mondat nem cserelheto fel: az egyik szerint az allat megkapta a gyogyszert.
+    const alcim = kimaradt
+      ? ["kimaradt", d.miss_reason ? "· " + d.miss_reason : "", d.given_by ? "· " + d.given_by : ""].filter(Boolean).join(" ")
+      : (kesz
+        ? ["megkapta", d.given_at || "", d.given_by ? "· " + d.given_by : ""].filter(Boolean).join(" ")
+        : (d.dose || ""));
     if (sor.alcim.textContent !== alcim) sor.alcim.textContent = alcim;
-    const osztaly = "sor" + (kesz ? " kesz" : "") + (kesik ? " kesik" : "");
+    if (sor.kihagy) sor.kihagy.style.display = (kimaradt || !this._tamogatKimaradt) ? "none" : "";
+    const osztaly = "sor" + (kesz ? " kesz" : "") + (kesik ? " kesik" : "") + (kimaradt ? " kimaradt" : "");
     if (sor.gyoker.className !== osztaly) sor.gyoker.className = osztaly;
+  }
+
+  _kihagy(kulcs) {
+    const allapot = this._allapot();
+    if (!allapot || !this._hass) return;
+    const adagok = (allapot.attributes && allapot.attributes.doses) || [];
+    const d = adagok.find((x) => this._kulcs(x) === kulcs);
+    if (!d || this._vartKimaradt(d)) return;
+    this._varakozoKimaradt.set(kulcs, true);
+    this._varakozo.delete(kulcs);
+    this._sorFrissit(this._sorok.get(kulcs), d);   // azonnali visszajelzes
+    if (!this._config.hide_header) this._fejlec(allapot.attributes || {}, adagok);
+    this._hass.callService("bogancs", "dose", {
+      medication: d.medication,
+      scheduled: d.scheduled || "",
+      given: false,
+      missed: true,
+      by: (this._config && this._config.by) || "Home Assistant",
+    }).catch(() => {
+      // Ha a mentes elszall, NE maradjon a kepernyon kimaradas, ami nincs rogzitve.
+      this._varakozoKimaradt.delete(kulcs);
+      this._sorFrissit(this._sorok.get(kulcs), d);
+    });
   }
 
   _koppint(kulcs) {
@@ -237,6 +308,9 @@ class BogancsDosesCard extends HTMLElement {
     if (!d) return;
     const uj = !this._vartGiven(d);
     this._varakozo.set(kulcs, uj);
+    // Ha kimaradtkent allt, a beadas JAVITJA (a szerver is igy kezeli), tehat a kepernyon
+    // sem maradhat ott a kimaradas.
+    if (uj) this._varakozoKimaradt.set(kulcs, false);
     this._sorFrissit(this._sorok.get(kulcs), d);   // azonnali visszajelzes
     if (!this._config.hide_header) this._fejlec(allapot.attributes || {}, adagok);
     this._hass.callService("bogancs", "dose", {

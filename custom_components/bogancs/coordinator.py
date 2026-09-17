@@ -73,7 +73,7 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return data
 
     async def async_set_dose(
-        self, medication: str, scheduled: str, given: bool, by: str
+        self, medication: str, scheduled: str, given: bool, by: str, missed: bool = False
     ) -> None:
         """Mark one dose as given (or undo it) and reflect it in the UI at once.
 
@@ -87,11 +87,14 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         So the cached row is patched locally from the answer the server already
         sends back, and the scheduled poll reconciles it a minute later anyway.
         """
+        # A `missed` a harmadik allapot (Begyo, 2026-09-17): se beadva, se "meg hatravan",
+        # hanem kimaradt. A regi szerver egyszeruen figyelmen kivul hagyja a mezot.
         body = {
             "medication": medication,
             "scheduled": scheduled,
             "given": given,
             "by": by,
+            "missed": missed,
         }
         try:
             async with self._session.post(
@@ -113,11 +116,16 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     valasz = {}
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"connection failed: {err}") from err
-        self._patch_dose(medication, scheduled, given, valasz)
+        self._patch_dose(medication, scheduled, given, valasz, missed)
         await self.async_request_refresh()
 
     def _patch_dose(
-        self, medication: str, scheduled: str, given: bool, valasz: dict[str, Any]
+        self,
+        medication: str,
+        scheduled: str,
+        given: bool,
+        valasz: dict[str, Any],
+        missed: bool = False,
     ) -> None:
         """Flip one dose in the cached data, and keep the summary counts honest.
 
@@ -139,9 +147,12 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 str(row.get("medication")) == medication
                 and str(row.get("scheduled")) == scheduled
             ):
-                row["given"] = bool(given)
-                row["given_at"] = str(valasz.get("given_at") or "") if given else ""
-                row["given_by"] = str(valasz.get("given_by") or "") if given else ""
+                row["given"] = bool(given) and not missed
+                row["missed"] = bool(missed)
+                row["given_at"] = str(valasz.get("given_at") or "") if given and not missed else ""
+                # A kimaradast is VALAKI rogzitette, ezert a nev ott is marad: a naploban ez
+                # mondja meg, ki dontott ugy, hogy az adag nem ment be.
+                row["given_by"] = str(valasz.get("given_by") or "") if given or missed else ""
                 talalt = True
                 break
         if not talalt:
@@ -151,9 +162,12 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # would contradict the ticks right next to it.
         most = dt_util.now()
         now_min = most.hour * 60 + most.minute
-        pending = overdue = 0
+        pending = overdue = kimaradt = 0
         kovetkezo = None
         for row in doses:
+            if row.get("missed"):
+                kimaradt += 1
+                continue
             if row.get("given"):
                 continue
             pending += 1
@@ -167,7 +181,8 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "med": row.get("med"),
                 }
         data["pending"] = pending
-        data["given"] = len(doses) - pending
+        data["given"] = len(doses) - pending - kimaradt
+        data["missed"] = kimaradt
         data["overdue"] = overdue
         data["next"] = kovetkezo
         self.async_set_updated_data(data)

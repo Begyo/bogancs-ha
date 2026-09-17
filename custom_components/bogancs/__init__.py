@@ -23,6 +23,8 @@ from .const import (
     CONF_URL,
     DEFAULT_URL,
     DOMAIN,
+    ATTR_MISSED,
+    ATTR_REASON,
     SERVICE_DOSE,
 )
 from .coordinator import BogancsAuthError, BogancsCoordinator
@@ -43,6 +45,10 @@ DOSE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SCHEDULED, default=""): cv.string,
         vol.Optional(ATTR_GIVEN, default=True): cv.boolean,
         vol.Optional(ATTR_BY, default="Home Assistant"): cv.string,
+        # Kimaradt adag (2026-09-17). Kulon mezo es nem masik szolgaltatas: ugyanarrol az
+        # adagrol van szo, csak a harmadik allapotaban.
+        vol.Optional(ATTR_MISSED, default=False): cv.boolean,
+        vol.Optional(ATTR_REASON, default=""): cv.string,
     }
 )
 
@@ -97,6 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 call.data.get(ATTR_SCHEDULED, ""),
                 call.data.get(ATTR_GIVEN, True),
                 call.data.get(ATTR_BY, "Home Assistant"),
+                missed=call.data.get(ATTR_MISSED, False),
             )
 
     if not hass.services.has_service(DOMAIN, SERVICE_DOSE):

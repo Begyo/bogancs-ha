@@ -23,5 +23,7 @@ ATTR_MEDICATION = "medication"
 ATTR_SCHEDULED = "scheduled"
 ATTR_GIVEN = "given"
 ATTR_BY = "by"
+ATTR_MISSED = "missed"
+ATTR_REASON = "reason"
 
 SERVICE_DOSE = "dose"

@@ -11,6 +11,31 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.4.0 (2026-09-17)
+
+**Kimaradt adag a vezérlőpultról**
+
+Eddig egy adagot csak beadottnak lehetett jelölni innen, vagy visszavonni. A harmadik
+állapotot, hogy az állat **nem kapta meg**, csak az appban lehetett rögzíteni. Pedig a
+kimaradás tény: ha csak hiányzik a sor, az „még nem adtuk be” képet mutat.
+
+- A **kártyán minden sor végén ott a figyelmeztető jel**: egy koppintás, és az adag
+  kimaradtként rögzül. A sor onnantól saját színnel és ikonnal látszik, alatta az ok és az,
+  hogy ki rögzítette. Ha mégis beadják, a sorra koppintás javítja az állapotot.
+- Új **„Kimaradt ma”** érzékelő, a kimaradt adagok listájával. Erre lehet automatizálást
+  építeni: ez az egyetlen állapot, amiről a vezérlőpult magától sosem szólna, mert nem múlik
+  el az idővel.
+- A `bogancs.dose` szolgáltatás két új mezőt kapott: `missed` és `reason`.
+- Az adag-kapcsolók `missed` attribútumot kaptak, és kimaradt adagnál más az ikonjuk.
+- A „Hátralévő adagok” érzékelő `given` száma **többé nem számolja beadottnak a kimaradt
+  adagot**. Eddig a nap teljesnek látszhatott úgy, hogy az állat nem kapta meg a gyógyszert.
+
+A kimaradás-gomb csak akkor jelenik meg, ha a kiszolgáló is tudja fogadni. Saját üzemeltetésű
+példánynál ehhez a Bogáncs 2.12.0 vagy újabb kell; a régebbi kiszolgálóval minden más
+változatlanul működik.
+
+---
+
 ## v1.3.3 (2026-09-16)
 
 **Javítva a leírásban**

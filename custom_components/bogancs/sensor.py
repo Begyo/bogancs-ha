@@ -71,6 +71,20 @@ SENSORS: tuple[BogancsSensorDescription, ...] = (
             "overdue": d.get("overdue", 0),
             "doses": d.get("doses", []),
             "interval": d.get("interval", []),
+            "missed": d.get("missed", 0),
+        },
+    ),
+    # KIMARADT (Begyo kerese 2026-09-17): sajat szenzor, mert ez az egyetlen allapot, amirol
+    # egy vezerlopult magatol sosem szolna. A hatralevo adag magatol elfogy (beadjak), a
+    # kimaradas viszont ott marad a napon, es pont ezt kell eszrevenni.
+    BogancsSensorDescription(
+        key="missed",
+        translation_key="missed",
+        icon="mdi:pill-off",
+        native_unit_of_measurement="adag",
+        value=lambda d: d.get("missed", 0),
+        extra=lambda d: {
+            "doses": [r for r in _lista(d, "doses") if r.get("missed")],
         },
     ),
     BogancsSensorDescription(
