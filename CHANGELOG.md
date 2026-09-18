@@ -11,6 +11,16 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.4.3 (2026-09-18)
+
+**Javítva: a kihagyás gombja felkiáltójel volt, nem áthúzott gyógyszer**
+
+A kimaradt adag sora már eddig is áthúzott gyógyszert mutatott, de a gomb, amivel kimaradtra
+lehet állítani, felkiáltójeles háromszög maradt. Most mindkettő ugyanaz a kép, így a jelentése
+egyértelmű.
+
+---
+
 ## v1.4.2 (2026-09-18)
 
 **Javítva: a kártya néha így is eltűnt, „Configuration error” maradt a helyén**

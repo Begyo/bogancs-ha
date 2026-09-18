@@ -240,7 +240,9 @@ class BogancsDosesCard extends HTMLElement {
     // ketto nem fer el ugyanazon a helyen (ugyanez a dontes az appban is).
     const kihagy = document.createElement("ha-icon");
     kihagy.className = "kihagy";
-    kihagy.setAttribute("icon", "mdi:alert-outline");
+    // Athuzott gyogyszer, nem felkialtojel (Begyo kerese): a gomb ugyanazt a kepet
+    // hasznalja, mint amit a kimaradt sor mutat, igy a jelentese egyertelmu.
+    kihagy.setAttribute("icon", "mdi:pill-off");
     kihagy.setAttribute("role", "button");
     kihagy.setAttribute("title", "Kimaradt");
     kihagy.addEventListener("click", (ev) => { ev.stopPropagation(); this._kihagy(kulcs); });
