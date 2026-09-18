@@ -11,6 +11,21 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.4.1 (2026-09-18)
+
+**Javítva: a kártya nem jelent meg, „Configuration error” állt a helyén**
+
+A „Mai adagok” kártya csak feltételesen regisztrálta magát a böngészőben. Ha a Home Assistantban
+van olyan másik egyéni kártya, ami saját elem-nyilvántartást hoz magával (több népszerű kártya
+ilyen), akkor az a nyilvántartás **tévesen azt mondja, hogy a kártya még nincs regisztrálva**,
+a feltétel viszont épp ezért kihagyta a regisztrációt. Az eredmény: a lista helyén
+„Configuration error” jelent meg.
+
+Mostantól a kártya feltétel nélkül regisztrál, a kétszeres regisztrációt pedig elnyeli. Ha
+eddig működött, ezután is ugyanúgy fog.
+
+---
+
 ## v1.4.0 (2026-09-17)
 
 **Kimaradt adag a vezérlőpultról**

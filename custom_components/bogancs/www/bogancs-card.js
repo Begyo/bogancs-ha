@@ -326,7 +326,17 @@ class BogancsDosesCard extends HTMLElement {
   }
 }
 
-if (!customElements.get(KARTYA)) customElements.define(KARTYA, BogancsDosesCard);
+/* A regisztracio FELTETEL NELKUL megy, es a duplikatumot elnyeljuk.
+   Miert nem `if (!customElements.get(KARTYA))`: nehany masik HACS-kartya egy scoped custom
+   element registry polyfillt hoz magaval, ami lecsereli a `customElements` fuggvenyeit. A
+   patchelt `get` HAMISAN undefined-ot ad egy mar regisztralt nevre is, ezert a felteteles ag
+   kihagyta a `define`-t -- a dashboardon pedig "Configuration error" jelent meg a lista helyen
+   (2026-09-18, Begyo fali tablaja). A felteteles vedelem itt tehat pont a hibat okozta. */
+try {
+  customElements.define(KARTYA, BogancsDosesCard);
+} catch (e) {
+  // Mar definialva: ez rendben van (ketszeri betoltes vagy masik registry).
+}
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === KARTYA)) {
