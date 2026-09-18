@@ -332,11 +332,27 @@ class BogancsDosesCard extends HTMLElement {
    patchelt `get` HAMISAN undefined-ot ad egy mar regisztralt nevre is, ezert a felteteles ag
    kihagyta a `define`-t -- a dashboardon pedig "Configuration error" jelent meg a lista helyen
    (2026-09-18, Begyo fali tablaja). A felteteles vedelem itt tehat pont a hibat okozta. */
-try {
-  customElements.define(KARTYA, BogancsDosesCard);
-} catch (e) {
-  // Mar definialva: ez rendben van (ketszeri betoltes vagy masik registry).
+/* A regisztraciot NEM eleg egyszer elvegezni. Nehany masik HACS-kartya egy scoped custom
+   element registry polyfillt hoz magaval, ami MENET KOZBEN lecsereli a `window.customElements`
+   objektumot. Ami a csere ELOTT lett definialva, az az uj nyilvantartasban nem latszik, es a
+   dashboardon "Configuration error" all a kartya helyen. Hogy melyik fut elobb, az
+   versenyhelyzet: ugyanaz a fajl egyik betolteskor mukodik, masikkor nem (2026-09-18, meresekkel).
+   Ezert az elso masodpercekben tobbszor visszaellenorizzuk magunkat, es ha eltuntunk, ujra
+   bejelentkezunk. Alosztallyal, mert ugyanazt a konstruktort egy masik nyilvantartas
+   visszautasithatja. */
+function bogancsRegisztral() {
+  try {
+    if (!customElements.get(KARTYA)) customElements.define(KARTYA, class extends BogancsDosesCard {});
+  } catch (e) {
+    // Mar definialva ebben a nyilvantartasban: ez rendben van.
+  }
 }
+bogancsRegisztral();
+[0, 50, 200, 800, 2000, 5000].forEach((ms) => setTimeout(bogancsRegisztral, ms));
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bogancsRegisztral);
+}
+window.addEventListener("load", bogancsRegisztral);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === KARTYA)) {

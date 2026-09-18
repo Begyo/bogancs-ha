@@ -11,6 +11,21 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.4.2 (2026-09-18)
+
+**Javítva: a kártya néha így is eltűnt, „Configuration error” maradt a helyén**
+
+A v1.4.1 a hibának csak a felét orvosolta. A valódi ok az, hogy néhány másik egyéni kártya
+**menet közben kicseréli a böngésző elem-nyilvántartását**. Ami a csere előtt került be, az az
+új nyilvántartásban nem látszik, és a Home Assistant nem találja a kártyát. Hogy melyik fut
+előbb, az a betöltés sorrendjén múlik, ezért ugyanaz a fájl egyszer működött, másszor nem.
+
+A kártya mostantól a betöltés utáni első másodpercekben többször ellenőrzi, hogy szerepel-e még
+a nyilvántartásban, és ha eltűnt, újra bejelentkezik. Így mindegy, milyen sorrendben töltődnek
+a kártyák.
+
+---
+
 ## v1.4.1 (2026-09-18)
 
 **Javítva: a kártya nem jelent meg, „Configuration error” állt a helyén**
