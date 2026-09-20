@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from homeassistant.util import dt as dt_util
 
-from .const import API_DOSE, API_STATE, UPDATE_INTERVAL
+from .const import API_DOSE, API_FEED, API_STATE, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -118,6 +118,55 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed(f"connection failed: {err}") from err
         self._patch_dose(medication, scheduled, given, valasz, missed)
         await self.async_request_refresh()
+
+    async def async_set_feed(self, feeding: str, alkalom: int, fed: bool) -> None:
+        """Etetes bejegyzese vagy visszavonasa (Begyo kerese 2026-09-20).
+
+        Ugyanaz a felepites, mint az adagnal, es ugyanazert: a coordinator tiz masodpercig
+        keslelteti a frissitest, ezert a gyorsan egymas utan lepipalt sorok befagyottnak
+        latszananak. A gyorstarat tehat HELYBEN is atallitjuk, a rendes lekerdezes meg
+        egy percen belul ugyis osszeegyezteti.
+        """
+        body = {"feeding": feeding, "alkalom": alkalom}
+        if not fed:
+            body["undo"] = True
+        try:
+            async with self._session.post(
+                f"{self._url}{API_FEED}",
+                headers={"X-Api-Key": self._key},
+                json=body,
+                timeout=aiohttp.ClientTimeout(total=20),
+            ) as resp:
+                if resp.status in (401, 403):
+                    raise BogancsAuthError
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise UpdateFailed(f"HTTP {resp.status}: {text[:120]}")
+        except aiohttp.ClientError as err:
+            raise UpdateFailed(f"connection failed: {err}") from err
+        self._patch_feed(feeding, alkalom, fed)
+        await self.async_request_refresh()
+
+    def _patch_feed(self, feeding: str, alkalom: int, fed: bool) -> None:
+        """Egy etetes-sor atallitasa a gyorstarban, az osszesitessel egyutt."""
+        data = self.data
+        if not isinstance(data, dict):
+            return
+        blokk = data.get("feeding")
+        if not isinstance(blokk, dict):
+            return
+        for row in blokk.get("rows", []):
+            if str(row.get("feeding")) == feeding and int(row.get("alkalom") or 0) == alkalom:
+                if bool(row.get("done")) == fed:
+                    return
+                row["done"] = fed
+                row["by"] = "Home Assistant" if fed else ""
+                break
+        else:
+            return
+        done = sum(1 for r in blokk.get("rows", []) if r.get("done"))
+        blokk["done"] = done
+        blokk["pending"] = max(0, int(blokk.get("total") or 0) - done)
 
     def _patch_dose(
         self,

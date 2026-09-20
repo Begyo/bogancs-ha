@@ -42,6 +42,14 @@ async def async_setup_entry(
                 continue
             known.add(key)
             new.append(BogancsDoseSwitch(coordinator, entry, row))
+        # ETETES (Begyo kerese 2026-09-20): alkalmankent egy kapcsolo, ugyanazzal az
+        # indokkal, mint az adagoknal -- a gomb sosem mutatna, megtortent-e mar.
+        for row in ((coordinator.data or {}).get("feeding") or {}).get("rows", []):
+            key = f"feed_{row.get('feeding')}_{row.get('alkalom')}"
+            if key in known:
+                continue
+            known.add(key)
+            new.append(BogancsFeedSwitch(coordinator, entry, row))
         if new:
             async_add_entities(new)
 
@@ -126,3 +134,72 @@ class BogancsDoseSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
         await self.coordinator.async_set_dose(
             self._medication, self._scheduled, False, "Home Assistant"
         )
+
+
+class BogancsFeedSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
+    """Egy etetes-alkalom: be = megetettuk, ki = meg nem.
+
+    Kapcsolo es nem gomb, ugyanazert, mint az adagnal: a gomb sosem mutatna, hogy
+    megtortent-e mar. A kapcsolo egy fali tableten ranezesre megmondja.
+    """
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:bowl-mix-outline"
+
+    def __init__(
+        self, coordinator: BogancsCoordinator, entry: ConfigEntry, row: dict[str, Any]
+    ) -> None:
+        super().__init__(coordinator)
+        self._feeding = str(row.get("feeding") or "")
+        self._alkalom = int(row.get("alkalom") or 1)
+        self._attr_unique_id = f"{entry.entry_id}_feed_{self._feeding}_{self._alkalom}"
+        db = int(row.get("of") or 1)
+        # A nev a napi alkalmat is mondja, kulonben ket egyforma kapcsolo allna egymas
+        # mellett, es a fali tableten nem lehetne eldonteni, melyik a reggeli.
+        sorszam = f" {self._alkalom}." if db > 1 else ""
+        self._attr_name = f"{row.get('pet_name', '')} – {row.get('name', '')}{sorszam}".strip()
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
+            manufacturer="Bogáncs kisállatkönyv",
+            configuration_url=coordinator.base_url,
+        )
+
+    @property
+    def _row(self) -> dict[str, Any]:
+        for row in ((self.coordinator.data or {}).get("feeding") or {}).get("rows", []):
+            if (
+                str(row.get("feeding")) == self._feeding
+                and int(row.get("alkalom") or 0) == self._alkalom
+            ):
+                return row
+        return {}
+
+    @property
+    def available(self) -> bool:
+        # A tap-sor torolheto, es a modul kikapcsolhato. Ilyenkor "ki" allast mutatni
+        # ugy nezne ki, mintha elfelejtettek volna etetni: inkabb nem elerheto.
+        return super().available and bool(self._row)
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self._row.get("done"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        row = self._row
+        return {
+            "pet": row.get("pet_name", ""),
+            "food": row.get("name", ""),
+            "amount": row.get("amount", ""),
+            "alkalom": self._alkalom,
+            "of": row.get("of", 1),
+            "fed_by": row.get("by", ""),
+            "fed_at": row.get("at", ""),
+        }
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_feed(self._feeding, self._alkalom, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_feed(self._feeding, self._alkalom, False)

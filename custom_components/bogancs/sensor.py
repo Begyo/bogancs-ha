@@ -105,6 +105,22 @@ SENSORS: tuple[BogancsSensorDescription, ...] = (
     # the count so an automation can gate on it; the whole list travels as an attribute so a
     # card renders without a second request. `next` is broken out because that is what a
     # single-line tile wants to show.
+    # ETETES (Begyo kerese 2026-09-20). Ugyanaz a viszony, mint az adagoknal: az allapot a
+    # HATRALEVO szam, hogy egy automatizalas ra tudjon kapcsolni, a teljes napi lista pedig
+    # attributumkent utazik, hogy egy kartya ne kerdezzen ujra. Ha a csalad kikapcsolta az
+    # Etetes modult, a szerver `null`-t kuld -- ilyenkor a szenzor 0, es a lista ures.
+    BogancsSensorDescription(
+        key="feeding",
+        translation_key="feeding",
+        icon="mdi:bowl-mix-outline",
+        native_unit_of_measurement="etetés",
+        value=lambda d: (d.get("feeding") or {}).get("pending", 0),
+        extra=lambda d: {
+            "total": (d.get("feeding") or {}).get("total", 0),
+            "done": (d.get("feeding") or {}).get("done", 0),
+            "rows": (d.get("feeding") or {}).get("rows", []),
+        },
+    ),
     BogancsSensorDescription(
         key="appointments",
         translation_key="appointments",

@@ -18,6 +18,7 @@ UPDATE_INTERVAL = timedelta(seconds=60)
 # Endpoints
 API_STATE = "/api/ha/state"
 API_DOSE = "/api/ha/dose"
+API_FEED = "/api/ha/feed"
 
 ATTR_MEDICATION = "medication"
 ATTR_SCHEDULED = "scheduled"
