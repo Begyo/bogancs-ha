@@ -429,10 +429,12 @@ class BogancsFeedsCard extends HTMLElement {
     const a = allapot.attributes || {};
     const sorok = Array.isArray(a.rows) ? a.rows : [];
     /* A kihagyas-gomb csak akkor jelenik meg, ha a SZERVER is tudja fogadni. A regi kiszolgalo
-       a "missed" mezot nem ismeri, es a sort simán megetetesnek venne -- ott a gomb az
-       ELLENKEZOJET rogzitene annak, amit a felhasznalo akar. A jel: az uj allapot mindig kuld
-       "missed" osszesitot es sor-szintu "missed" mezot. (Ugyanez a fogas az adag-kartyan.) */
-    this._tamogatKimaradt = a.missed !== undefined || sorok.some((r) => r.missed !== undefined);
+       a "missed" mezot nem ismeri, es a kihagyast sima megetetesnek venne -- ott a gomb az
+       ELLENKEZOJET rogzitene annak, amit a felhasznalo akar.
+       A jel KIZAROLAG a SOR-szintu "missed" mezo lehet. Az osszesito NEM jo jel: azt a szenzor
+       akkor is kiadja (0 ertekkel), ha a kiszolgalo nem kuldott ilyet, tehat regi kiszolgalon is
+       "tamogatottnak" latszana. Ezt 2026-09-21-en meresnel kaptam el, a kiadas elott. */
+    this._tamogatKimaradt = sorok.some((r) => r.missed !== undefined);
     if (!this._keret) this._epit();
     if (this._config.hide_header) { if (this._fejDoboz) this._fejDoboz.style.display = "none"; this._keret.classList.add("nincs-fej"); }
     else { if (this._fejDoboz) this._fejDoboz.style.display = ""; this._fejlec(sorok); }

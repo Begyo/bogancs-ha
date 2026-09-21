@@ -11,6 +11,18 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.7.1 (2026-09-21)
+
+**Javítva: a kihagyás-gomb régi kiszolgálón is megjelent volna**
+
+A v1.7.0 abból állapította meg, hogy a kiszolgáló ismeri-e a kimaradt állapotot, hogy van-e
+összesítő szám hozzá. Csakhogy azt az érzékelő akkor is kiadja, nullával, ha a kiszolgáló nem
+küldött ilyet, tehát régebbi kiszolgálón is megjelent volna a gomb, és a koppintás az
+ellenkezőjét rögzítette volna: megetetést kimaradás helyett. Mostantól a döntés a sorokon lévő
+mezőből jön, azt pedig csak az új kiszolgáló küldi.
+
+---
+
 ## v1.7.0 (2026-09-21)
 
 **Az etetés végre tényleg úgy működik, mint a gyógyszerezés**
