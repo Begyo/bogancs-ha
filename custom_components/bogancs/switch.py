@@ -196,6 +196,9 @@ class BogancsFeedSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
             "of": row.get("of", 1),
             "fed_by": row.get("by", ""),
             "fed_at": row.get("at", ""),
+            # A kimaradt etetes se nem "be", se nem "ki": a kapcsolo ilyenkor KI, mert az allat
+            # nem kapta meg, de az attributum megmondja, hogy ez eldolt, nem elfelejtettek.
+            "missed": bool(row.get("missed")),
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:

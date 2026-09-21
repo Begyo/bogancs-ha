@@ -65,13 +65,16 @@ type: custom:bogancs-feeds
 | `by` | ez a név kerül a naplóba (alapból *Home Assistant*) |
 
 Az etetésnek nincs időpontja, csak napi sorszáma, ezért késés sincs: ami nincs kipipálva, az
-egyszerűen hátravan.
+egyszerűen hátravan. A soron lévő külön gombbal az etetés **kimaradtnak** jelölhető, ugyanúgy,
+mint a gyógyszeradag: ez se nem kész, se nem hátravan, hanem eldőlt. A gomb csak akkor jelenik
+meg, ha a kiszolgáló tudja fogadni (kisállatkönyv 2.14.0-tól).
 
 **Szolgáltatás**
 
 `bogancs.dose` – automatizálásból jelölhetsz be egy adagot, vagy vonhatsz vissza egyet.
 
 `bogancs.feed` – ugyanez az etetésre: a táp azonosítója és a napi alkalom sorszáma kell hozzá.
+A `missed` mezővel kimaradtként is rögzíthető.
 
 ## Telepítés HACS-ból
 

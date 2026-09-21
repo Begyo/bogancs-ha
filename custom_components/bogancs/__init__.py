@@ -19,6 +19,7 @@ from .const import (
     ATTR_BY,
     ATTR_FED,
     ATTR_FEEDING,
+    ATTR_FEED_MISSED,
     ATTR_GIVEN,
     ATTR_MEDICATION,
     ATTR_SCHEDULED,
@@ -63,6 +64,7 @@ FEED_SCHEMA = vol.Schema(
         vol.Required(ATTR_FEEDING): cv.string,
         vol.Optional(ATTR_ALKALOM, default=1): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(ATTR_FED, default=True): cv.boolean,
+        vol.Optional(ATTR_FEED_MISSED, default=False): cv.boolean,
         vol.Optional(ATTR_BY, default="Home Assistant"): cv.string,
     }
 )
@@ -83,15 +85,24 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     path = Path(__file__).parent / "www" / CARD_FILE
     if not path.is_file():
         return
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(CARD_URL, str(path), True)]
-    )
+    # A jelzot az ELSO `await` ELOTT kell beallitani. Ket felvett csalad eseten a ket bejegyzes
+    # egyszerre indul, mindketto atjutna a fenti ellenorzesen, es a masodik regisztracio
+    # "Added route will never be executed, method GET is already registered" hibaval megolne a
+    # MASODIK csalad egesz bejegyzeset (2026-09-21-en merve, ket bejegyzessel).
+    hass.data[CARD_FLAG] = True
+    try:
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(CARD_URL, str(path), True)]
+        )
+    except (RuntimeError, ValueError):
+        # Mar regisztralva van (pl. a HA belso ujratoltese utan): a kartya kiszolgalasa el,
+        # nincs teendo. A bejegyzes emiatt SOHA ne dolje el.
+        return
     # A cache-buster the browser can see: without it a returning user keeps the old card
     # after an update, and the fix looks like it never shipped. The version comes from the
     # manifest, so it can never drift from what HACS reports.
     integration = await async_get_integration(hass, DOMAIN)
     add_extra_js_url(hass, f"{CARD_URL}?v={integration.version}")
-    hass.data[CARD_FLAG] = True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -139,6 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         alkalom,
                         call.data.get(ATTR_FED, True),
                         call.data.get(ATTR_BY, "Home Assistant"),
+                        missed=call.data.get(ATTR_FEED_MISSED, False),
                     )
                     return
 

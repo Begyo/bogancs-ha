@@ -30,6 +30,7 @@ ATTR_REASON = "reason"
 ATTR_FEEDING = "feeding"
 ATTR_ALKALOM = "alkalom"
 ATTR_FED = "fed"
+ATTR_FEED_MISSED = "missed"
 
 SERVICE_DOSE = "dose"
 SERVICE_FEED = "feed"

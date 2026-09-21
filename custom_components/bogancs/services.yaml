@@ -79,6 +79,15 @@ feed:
       default: true
       selector:
         boolean:
+    missed:
+      name: Kimaradt
+      description: >-
+        Igaz = az etetés KIMARADT (nem kapta meg). Ez erősebb a "Megetette" mezőnél: ha be van
+        jelölve, az etetés kimaradtként rögzül, akkor is, ha a Megetette igaz.
+      required: false
+      default: false
+      selector:
+        boolean:
     by:
       name: Ki etette meg
       description: Ez a név kerül a naplóba.

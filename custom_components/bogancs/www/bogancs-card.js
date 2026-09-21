@@ -371,11 +371,18 @@ if (!window.customCards.some((c) => c.type === KARTYA)) {
  * "Etetest tedd ki a HA dashboard-ra, hogy a kiosk-on is lehessen pipalgatni").
  *
  * Ugyanaz a felepites, mint az adag-kartyanal, es ugyanazert: sor-szinten frissit, hogy egy
- * pipa bejelolese utan ne villanjon a kepernyo es ne ugorjon vissza a gorgetes. Ket kulonbseg
- * van az adagokhoz kepest, es mindketto a szerver adatabol jon:
- *   - az etetesnek NINCS idopontja, csak napi SORSZAMA (1., 2. alkalom), ezert keses sincs.
- *     A fejlec tehat soha nem pirosodik ki -- ha valami elmaradt, az egyszeruen hatravan.
- *   - nincs harmadik allapot (kimaradt), tehat a sornak nincs kulon kihagyas-gombja.
+ * pipa bejelolese utan ne villanjon a kepernyo es ne ugorjon vissza a gorgetes.
+ *
+ * EGY kulonbseg van az adagokhoz kepest: az etetesnek NINCS idopontja, csak napi SORSZAMA
+ * (1., 2. alkalom), ezert keses sincs. A fejlec tehat soha nem pirosodik ki -- ami nincs
+ * kipipalva, az egyszeruen hatravan.
+ *
+ * JAVITVA 2026-09-21: itt eredetileg az allt, hogy az etetesnek nincs harmadik allapota
+ * (kimaradt), ezert a sornak nem kell kihagyas-gomb. Ez TEVES volt. Az appban a kimaradt etetes
+ * MEGVAN (athuzott evoeszkoz), csak a Home Assistant vegpontja nem adta ki. A tevedes abbol
+ * szuletett, hogy a vegpont ALAKJABOL kovetkeztettem az app viselkedesere, ahelyett hogy az app
+ * kodjaban neztem volna meg.
+ *
  * A sor kulcsa a tap azonositoja es az alkalom sorszama, mert ugyanabbol a tapbol napi tobb
  * alkalom is van, es azok kulon pipalhatok.
  * ---------------------------------------------------------------------------------------- */
@@ -388,6 +395,7 @@ class BogancsFeedsCard extends HTMLElement {
     this._sorok = new Map();
     this._utolso = "";
     this._varakozo = new Map(); // kulcs -> a felhasznalo altal VART allapot, amig a szerver valaszol
+    this._varakozoKimaradt = new Map(); // ugyanez a kihagyas-gombra
   }
 
   setConfig(config) {
@@ -420,6 +428,11 @@ class BogancsFeedsCard extends HTMLElement {
     if (!allapot) { this._uresen("Nincs Bogáncs etetés-szenzor. Add meg az entitást a kártya beállításában."); return; }
     const a = allapot.attributes || {};
     const sorok = Array.isArray(a.rows) ? a.rows : [];
+    /* A kihagyas-gomb csak akkor jelenik meg, ha a SZERVER is tudja fogadni. A regi kiszolgalo
+       a "missed" mezot nem ismeri, es a sort simán megetetesnek venne -- ott a gomb az
+       ELLENKEZOJET rogzitene annak, amit a felhasznalo akar. A jel: az uj allapot mindig kuld
+       "missed" osszesitot es sor-szintu "missed" mezot. (Ugyanez a fogas az adag-kartyan.) */
+    this._tamogatKimaradt = a.missed !== undefined || sorok.some((r) => r.missed !== undefined);
     if (!this._keret) this._epit();
     if (this._config.hide_header) { if (this._fejDoboz) this._fejDoboz.style.display = "none"; this._keret.classList.add("nincs-fej"); }
     else { if (this._fejDoboz) this._fejDoboz.style.display = ""; this._fejlec(sorok); }
@@ -463,6 +476,12 @@ class BogancsFeedsCard extends HTMLElement {
       .cim1 { font-size: .95rem; color: var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .cim2 { font-size: .78rem; color: var(--secondary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .kesz .cim1 { color: var(--secondary-text-color); text-decoration: line-through; }
+      /* A kimaradt etetes se nem kesz, se nem hatravan: sajat kepe van, kulonben a ket allapot
+         osszemosodik es a nap teljesnek latszik ugy, hogy az allat nem kapott enni. */
+      .kimaradt .cim1 { color: var(--warning-color, #e8a33d); font-weight: 600; }
+      .kihagy { --mdc-icon-size: 20px; flex: none; border: none; background: none; cursor: pointer;
+                color: var(--secondary-text-color); padding: 4px; border-radius: 8px; }
+      .kihagy:hover { background: var(--secondary-background-color); color: var(--warning-color, #e8a33d); }
       .ures { padding: 14px 12px; color: var(--secondary-text-color); font-size: .9rem; }
     `;
     const kartya = document.createElement("ha-card");
@@ -492,17 +511,24 @@ class BogancsFeedsCard extends HTMLElement {
 
   _fejlec(sorok) {
     const kesz = sorok.filter((r) => this._vartKesz(r)).length;
+    const kimaradt = sorok.filter((r) => this._vartKimaradt(r)).length;
+    const hatra = sorok.length - kesz - kimaradt;
     const cim = (this._config && this._config.title) || "Mai etetés";
     if (this._fejFo.textContent !== cim) this._fejFo.textContent = cim;
     const szam = kesz + " / " + sorok.length;
     if (this._fejSzam.textContent !== szam) this._fejSzam.textContent = szam;
-    const alcim = sorok.length
-      ? (kesz === sorok.length ? "mindet megkapta" : (sorok.length - kesz) + " van hátra")
-      : "";
+    // A kimaradt kulon all, es NEM szamit hatraleknak: mar eldolt, nincs vele teendo.
+    const reszek = [];
+    if (kimaradt > 0) reszek.push(kimaradt + " kimaradt");
+    if (hatra > 0) reszek.push(hatra + " van hátra");
+    const alcim = reszek.length
+      ? reszek.join(" · ")
+      : (sorok.length && kesz === sorok.length ? "mindet megkapta" : "");
     if (this._fejAlcim.textContent !== alcim) this._fejAlcim.textContent = alcim;
-    const ikon = (sorok.length && kesz === sorok.length) ? "mdi:check-decagram" : "mdi:bowl-mix-outline";
+    const mind = sorok.length && hatra === 0;
+    const ikon = mind ? "mdi:check-decagram" : "mdi:bowl-mix-outline";
     if (this._fejIkon.getAttribute("icon") !== ikon) this._fejIkon.setAttribute("icon", ikon);
-    this._fejIkon.style.color = (sorok.length && kesz === sorok.length) ? "var(--success-color)" : "var(--state-icon-color)";
+    this._fejIkon.style.color = mind ? "var(--success-color)" : "var(--state-icon-color)";
   }
 
   _kulcs(r) { return String(r.feeding) + "#" + String(r.alkalom || 1); }
@@ -514,6 +540,10 @@ class BogancsFeedsCard extends HTMLElement {
   _ora(iso) {
     const sz = String(iso || "").trim();
     if (!sz) return "";
+    // A 2.14.0-tol a kiszolgalo MAR ora:perc alakban kuldi (ugyanugy, mint az adagoknal).
+    // A regi, nyers UTC belyeget viszont tovabbra is at kell valtani, kulonben a regebbi
+    // kiszolgalon a teljes belyeg allna a tablan, ket oraval korabbi oraval.
+    if (/^\d{1,2}:\d{2}$/.test(sz)) return sz;
     const d = new Date(sz.replace(" ", "T"));
     if (isNaN(d.getTime())) return "";
     const p = (n) => (n < 10 ? "0" : "") + n;
@@ -523,6 +553,7 @@ class BogancsFeedsCard extends HTMLElement {
   /* A koppintas AZONNAL latszik, meg mielott a szerver valaszolna. Amint a szenzor ugyanazt
      mondja, a varakozo bejegyzes torlodik. */
   _vartKesz(r) {
+    if (this._vartKimaradt(r)) return false;
     const k = this._kulcs(r);
     if (this._varakozo.has(k)) {
       const vart = this._varakozo.get(k);
@@ -530,6 +561,16 @@ class BogancsFeedsCard extends HTMLElement {
       return vart;
     }
     return !!r.done;
+  }
+
+  _vartKimaradt(r) {
+    const k = this._kulcs(r);
+    if (this._varakozoKimaradt.has(k)) {
+      const vart = this._varakozoKimaradt.get(k);
+      if (!!r.missed === vart) { this._varakozoKimaradt.delete(k); return !!r.missed; }
+      return vart;
+    }
+    return !!r.missed;
   }
 
   _lista(sorok) {
@@ -576,18 +617,29 @@ class BogancsFeedsCard extends HTMLElement {
     alcim.className = "cim2";
     szoveg.appendChild(cim);
     szoveg.appendChild(alcim);
+    // A kihagyasnak SAJAT celpontja van, nem a sorra koppintas: a sor megetetest rogzit, a
+    // ketto nem fer el ugyanazon a helyen (ugyanez a dontes az appban es az adag-kartyan is).
+    const kihagy = document.createElement("ha-icon");
+    kihagy.className = "kihagy";
+    kihagy.setAttribute("icon", "mdi:bowl-mix");
+    kihagy.setAttribute("role", "button");
+    kihagy.setAttribute("title", "Kimaradt");
+    kihagy.addEventListener("click", (ev) => { ev.stopPropagation(); this._kihagy(kulcs); });
     gyoker.appendChild(ikon);
     gyoker.appendChild(szoveg);
+    gyoker.appendChild(kihagy);
     gyoker.addEventListener("click", () => this._koppint(kulcs));
-    return { gyoker, ikon, cim, alcim };
+    return { gyoker, ikon, cim, alcim, kihagy };
   }
 
   _sorFrissit(sor, r) {
     if (!sor) return;
-    const kesz = this._vartKesz(r);
-    const ikon = kesz ? "mdi:check-circle" : "mdi:circle-outline";
+    const kimaradt = this._vartKimaradt(r);
+    const kesz = !kimaradt && this._vartKesz(r);
+    const ikon = kimaradt ? "mdi:bowl-mix" : (kesz ? "mdi:check-circle" : "mdi:circle-outline");
     if (sor.ikon.getAttribute("icon") !== ikon) sor.ikon.setAttribute("icon", ikon);
-    const szin = kesz ? "var(--success-color)" : "var(--state-icon-color)";
+    const szin = kimaradt ? "var(--warning-color, #e8a33d)"
+      : (kesz ? "var(--success-color)" : "var(--state-icon-color)");
     if (sor.ikon.style.color !== szin) sor.ikon.style.color = szin;
     // Az alkalom sorszama a CIMBE kerul, es csak akkor, ha napi tobb van belole. Az alcimben
     // allva a mar megetetett sor nem mondana sorszamot (ott a "megetette ..." all), es ket
@@ -597,12 +649,40 @@ class BogancsFeedsCard extends HTMLElement {
     const sorszam = db > 1 ? (r.alkalom + ". ") : "";
     const cim = sorszam + [r.pet_name, r.name].filter(Boolean).join("  ·  ");
     if (sor.cim.textContent !== cim) sor.cim.textContent = cim;
-    const alcim = kesz
-      ? ["megetette", this._ora(r.at), r.by ? "· " + r.by : ""].filter(Boolean).join(" ")
-      : (r.amount || "");
+    // A kimaradtnal nem "megetette" all, hanem hogy KIMARADT, es ki rogzitette. Ez a ket
+    // mondat nem cserelheto fel: az egyik szerint az allat evett.
+    const alcim = kimaradt
+      ? ["kimaradt", this._ora(r.at), r.by ? "· " + r.by : ""].filter(Boolean).join(" ")
+      : (kesz
+        ? ["megetette", this._ora(r.at), r.by ? "· " + r.by : ""].filter(Boolean).join(" ")
+        : (r.amount || ""));
     if (sor.alcim.textContent !== alcim) sor.alcim.textContent = alcim;
-    const osztaly = "sor" + (kesz ? " kesz" : "");
+    if (sor.kihagy) sor.kihagy.style.display = (kimaradt || !this._tamogatKimaradt) ? "none" : "";
+    const osztaly = "sor" + (kesz ? " kesz" : "") + (kimaradt ? " kimaradt" : "");
     if (sor.gyoker.className !== osztaly) sor.gyoker.className = osztaly;
+  }
+
+  _kihagy(kulcs) {
+    const allapot = this._allapot();
+    if (!allapot || !this._hass) return;
+    const sorok = (allapot.attributes && allapot.attributes.rows) || [];
+    const r = sorok.find((x) => this._kulcs(x) === kulcs);
+    if (!r || this._vartKimaradt(r)) return;
+    this._varakozoKimaradt.set(kulcs, true);
+    this._varakozo.delete(kulcs);
+    this._sorFrissit(this._sorok.get(kulcs), r);   // azonnali visszajelzes
+    if (!this._config.hide_header) this._fejlec(sorok);
+    this._hass.callService("bogancs", "feed", {
+      feeding: r.feeding,
+      alkalom: parseInt(r.alkalom, 10) || 1,
+      fed: false,
+      missed: true,
+      by: (this._config && this._config.by) || "Home Assistant",
+    }).catch(() => {
+      // Ha a mentes elszall, NE maradjon a kepernyon kimaradas, ami nincs rogzitve.
+      this._varakozoKimaradt.delete(kulcs);
+      this._sorFrissit(this._sorok.get(kulcs), r);
+    });
   }
 
   _koppint(kulcs) {
@@ -613,6 +693,9 @@ class BogancsFeedsCard extends HTMLElement {
     if (!r) return;
     const uj = !this._vartKesz(r);
     this._varakozo.set(kulcs, uj);
+    // Ha kimaradtkent allt, a megetetes JAVITJA (a szerver is igy kezeli), tehat a kepernyon
+    // sem maradhat ott a kimaradas.
+    if (uj) this._varakozoKimaradt.set(kulcs, false);
     this._sorFrissit(this._sorok.get(kulcs), r);   // azonnali visszajelzes
     if (!this._config.hide_header) this._fejlec(sorok);
     this._hass.callService("bogancs", "feed", {

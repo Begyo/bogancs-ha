@@ -11,6 +11,38 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.7.0 (2026-09-21)
+
+**Az etetés végre tényleg úgy működik, mint a gyógyszerezés**
+
+Az előző kiadás után kiderült, hogy az etetés négy ponton is eltért a gyógyszerezéstől, pedig az
+volt a kikötés, hogy ugyanúgy viselkedjen. Mind a négy javítva:
+
+**Kimaradt etetés.** Az appban ez eddig is megvolt (áthúzott evőeszköz), a Home Assistant
+oldalán nem. Mostantól a soron van egy külön gomb, és a kimaradt etetés saját képet kap: se nem
+kész, se nem hátravan. A fejléc is külön mondja. Ez azért fontos, mert enélkül a nap teljesnek
+látszik úgy, hogy az állat nem kapott enni.
+
+**Ki írta be.** A kártya `by` beállítása eddig elveszett, és minden Home Assistantből jövő
+etetés *Home Assistant* néven került a naplóba. Mostantól a megadott név megy be.
+
+**Az időpont.** A lista eddig nyers UTC bélyeget kapott a kiszolgálótól, nem óra:percet, mint az
+adagoknál. Mostantól óra:perc jön; a kártya a régi alakot is elfogadja, tehát régebbi
+kiszolgálóval is helyes időt mutat.
+
+**A nap elcsúszása.** A pipálás helyi naptári napra írt, miközben a lista UTC szerinti napot
+kérdez. Éjfél és hajnali 2 között ez két külön nap volt: az akkor bepipált etetés nem jelent meg.
+
+A kimaradt állapothoz és a névhez **a kisállatkönyv 2.14.0 kiadása kell**. Amíg az nincs fenn, a
+kihagyás-gomb nem is jelenik meg (nem csinálna jót), a pipálás viszont változatlanul működik.
+
+**Javítva: két család esetén a második nem indult el.** Ha két családot vettél fel, a második
+bejegyzés *Error setting up entry* hibával elszállt, és egyetlen entitása sem jött létre. Oka: a
+saját kártyát mindkét bejegyzés egyszerre próbálta bejegyezni a kiszolgálóba. Ez azóta
+érintettségi kérdés, hogy a kisállatkönyv 2.13.0 óta egyszerre több családban is lehetsz tag.
+
+---
+
 ## v1.6.0 (2026-09-21)
 
 **Az etetés kikerülhet a vezérlőpultra: saját kártya és szolgáltatás**
@@ -29,9 +61,8 @@ jelzésére) is be lehessen jegyezni az etetést. A szolgáltatás csak ahhoz a 
 amelyiknél a sor tényleg létezik: két felvett család esetén a másiknak küldött kérés hibával
 szállna el, pedig az etetés rögzült.
 
-A kártya `by` beállítása (ki írja be a naplóba) a kisállatkönyv **következő kiadásától** hat.
-Addig minden Home Assistantből jövő etetés *Home Assistant* néven kerül a naplóba, akkor is, ha
-a kártyán más nevet adsz meg. A gyógyszeradagnál ez már eddig is működött.
+A kártya `by` beállítása (ki írja be a naplóba) ebben a kiadásban még nem hatott; a v1.7.0
+javítja, a kisállatkönyv 2.14.0 kiadásával együtt.
 
 ---
 

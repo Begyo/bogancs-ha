@@ -118,6 +118,9 @@ SENSORS: tuple[BogancsSensorDescription, ...] = (
         extra=lambda d: {
             "total": (d.get("feeding") or {}).get("total", 0),
             "done": (d.get("feeding") or {}).get("done", 0),
+            # A kimaradt kulon szam: se nem kesz, se nem hatravan. Egy kartya ebbol tudja, hogy
+            # a kiszolgalo ismeri-e egyaltalan a harmadik allapotot.
+            "missed": (d.get("feeding") or {}).get("missed", 0),
             "rows": (d.get("feeding") or {}).get("rows", []),
         },
     ),

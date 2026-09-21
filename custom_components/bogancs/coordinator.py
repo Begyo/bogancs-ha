@@ -120,7 +120,12 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_request_refresh()
 
     async def async_set_feed(
-        self, feeding: str, alkalom: int, fed: bool, by: str = "Home Assistant"
+        self,
+        feeding: str,
+        alkalom: int,
+        fed: bool,
+        by: str = "Home Assistant",
+        missed: bool = False,
     ) -> None:
         """Etetes bejegyzese vagy visszavonasa (Begyo kerese 2026-09-20).
 
@@ -129,8 +134,11 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         latszananak. A gyorstarat tehat HELYBEN is atallitjuk, a rendes lekerdezes meg
         egy percen belul ugyis osszeegyezteti.
         """
-        body = {"feeding": feeding, "alkalom": alkalom, "by": by}
-        if not fed:
+        # A `missed` a harmadik allapot, es EROSEBB a `fed`-nel: aki kimaradast jelol, az nem
+        # megetetest akar rogziteni. Ugyanaz a viszony, mint az adagnal a `missed` es a `given`
+        # kozott. A regi kiszolgalo a mezot egyszeruen figyelmen kivul hagyja.
+        body = {"feeding": feeding, "alkalom": alkalom, "by": by, "missed": missed}
+        if not fed and not missed:
             body["undo"] = True
         try:
             async with self._session.post(
@@ -146,11 +154,16 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     raise UpdateFailed(f"HTTP {resp.status}: {text[:120]}")
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"connection failed: {err}") from err
-        self._patch_feed(feeding, alkalom, fed, by)
+        self._patch_feed(feeding, alkalom, fed, by, missed)
         await self.async_request_refresh()
 
     def _patch_feed(
-        self, feeding: str, alkalom: int, fed: bool, by: str = "Home Assistant"
+        self,
+        feeding: str,
+        alkalom: int,
+        fed: bool,
+        by: str = "Home Assistant",
+        missed: bool = False,
     ) -> None:
         """Egy etetes-sor atallitasa a gyorstarban, az osszesitessel egyutt."""
         data = self.data
@@ -161,16 +174,21 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         for row in blokk.get("rows", []):
             if str(row.get("feeding")) == feeding and int(row.get("alkalom") or 0) == alkalom:
-                if bool(row.get("done")) == fed:
+                if bool(row.get("done")) == fed and bool(row.get("missed")) == missed:
                     return
-                row["done"] = fed
-                row["by"] = (by or "Home Assistant") if fed else ""
+                row["done"] = fed and not missed
+                row["missed"] = missed
+                row["by"] = (by or "Home Assistant") if (fed or missed) else ""
                 break
         else:
             return
         done = sum(1 for r in blokk.get("rows", []) if r.get("done"))
+        kimaradt = sum(1 for r in blokk.get("rows", []) if r.get("missed"))
         blokk["done"] = done
-        blokk["pending"] = max(0, int(blokk.get("total") or 0) - done)
+        blokk["missed"] = kimaradt
+        # A kimaradt mar eldolt, tehat nem hatralek -- kulonben a tablan orokre ott allna egy
+        # szam, amin mar nem lehet mit csinalni. Ugyanez a szabaly a szerver oldalan is.
+        blokk["pending"] = max(0, int(blokk.get("total") or 0) - done - kimaradt)
 
     def _patch_dose(
         self,
