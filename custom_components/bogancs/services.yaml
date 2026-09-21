@@ -48,3 +48,41 @@ dose:
       default: "Home Assistant"
       selector:
         text:
+
+feed:
+  name: Etetés megtörtént
+  description: >-
+    Megjelöli az etetést megtörténtként, vagy visszavonja. Automatizálásból hívható,
+    például amikor az automata etető jelez.
+  fields:
+    feeding:
+      name: A táp azonosítója
+      description: A táp azonosítója. A "Hátralévő etetés" szenzor rows attribútumában találod.
+      required: true
+      example: "abc123def456ghi"
+      selector:
+        text:
+    alkalom:
+      name: Hányadik alkalom
+      description: A napi etetések közül a hányadik (1-től). Napi egy etetésnél hagyd 1-en.
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 12
+          mode: box
+    fed:
+      name: Megetette
+      description: Igaz = megetette, hamis = a bejegyzés visszavonása.
+      required: false
+      default: true
+      selector:
+        boolean:
+    by:
+      name: Ki etette meg
+      description: Ez a név kerül a naplóba.
+      required: false
+      default: "Home Assistant"
+      selector:
+        text:

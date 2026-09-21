@@ -365,3 +365,292 @@ if (!window.customCards.some((c) => c.type === KARTYA)) {
     preview: false,
   });
 }
+
+/* ------------------------------------------------------------------------------------------
+ * Bogancs kisallatkonyv -- "Mai etetes" kartya (Begyo kerese 2026-09-21, jegy #40:
+ * "Etetest tedd ki a HA dashboard-ra, hogy a kiosk-on is lehessen pipalgatni").
+ *
+ * Ugyanaz a felepites, mint az adag-kartyanal, es ugyanazert: sor-szinten frissit, hogy egy
+ * pipa bejelolese utan ne villanjon a kepernyo es ne ugorjon vissza a gorgetes. Ket kulonbseg
+ * van az adagokhoz kepest, es mindketto a szerver adatabol jon:
+ *   - az etetesnek NINCS idopontja, csak napi SORSZAMA (1., 2. alkalom), ezert keses sincs.
+ *     A fejlec tehat soha nem pirosodik ki -- ha valami elmaradt, az egyszeruen hatravan.
+ *   - nincs harmadik allapot (kimaradt), tehat a sornak nincs kulon kihagyas-gombja.
+ * A sor kulcsa a tap azonositoja es az alkalom sorszama, mert ugyanabbol a tapbol napi tobb
+ * alkalom is van, es azok kulon pipalhatok.
+ * ---------------------------------------------------------------------------------------- */
+
+const ETETES_KARTYA = "bogancs-feeds";
+
+class BogancsFeedsCard extends HTMLElement {
+  constructor() {
+    super();
+    this._sorok = new Map();
+    this._utolso = "";
+    this._varakozo = new Map(); // kulcs -> a felhasznalo altal VART allapot, amig a szerver valaszol
+  }
+
+  setConfig(config) {
+    // `hide_header`: a kioszkon van sajat fejlec-kartya a szamlaloval, ott a mienk ismetles lenne.
+    // `hide_done`: a mar megetetett sorok elrejtese (kis kijelzon hasznos).
+    this._config = Object.assign({ hide_done: false, hide_header: false }, config || {});
+  }
+
+  getCardSize() { return 3 + Math.ceil(this._sorok.size / 2); }
+
+  static getStubConfig(hass) {
+    return { type: "custom:" + ETETES_KARTYA, entity: BogancsFeedsCard._keres(hass) || "" };
+  }
+
+  /* Az etetes-szenzor az egyetlen, aminek `rows` tombje van (a tobbi lista `items` neven
+     utazik), de a harom mezot egyutt nezzuk, hogy egy masik integracio hasonlo szenzorat
+     biztosan ne valasszuk ki. */
+  static _keres(hass) {
+    if (!hass || !hass.states) return null;
+    return Object.keys(hass.states).find((id) => {
+      if (!id.startsWith("sensor.")) return false;
+      const a = hass.states[id].attributes || {};
+      return Array.isArray(a.rows) && a.total !== undefined && a.done !== undefined;
+    }) || null;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    const allapot = this._allapot();
+    if (!allapot) { this._uresen("Nincs Bogáncs etetés-szenzor. Add meg az entitást a kártya beállításában."); return; }
+    const a = allapot.attributes || {};
+    const sorok = Array.isArray(a.rows) ? a.rows : [];
+    if (!this._keret) this._epit();
+    if (this._config.hide_header) { if (this._fejDoboz) this._fejDoboz.style.display = "none"; this._keret.classList.add("nincs-fej"); }
+    else { if (this._fejDoboz) this._fejDoboz.style.display = ""; this._fejlec(sorok); }
+    this._lista(sorok);
+  }
+
+  _allapot() {
+    const h = this._hass;
+    if (!h) return null;
+    const nev = this._config && this._config.entity;
+    if (nev && h.states[nev]) return h.states[nev];
+    if (nev) return null;
+    const talalt = BogancsFeedsCard._keres(h);
+    return talalt ? h.states[talalt] : null;
+  }
+
+  _uresen(uzenet) {
+    if (!this._keret) this._epit();
+    this._sorokDoboz.textContent = "";
+    this._sorok.clear();
+    const p = document.createElement("div");
+    p.className = "ures";
+    p.textContent = uzenet;
+    this._sorokDoboz.appendChild(p);
+  }
+
+  _epit() {
+    const arnyek = this.attachShadow ? (this.shadowRoot || this.attachShadow({ mode: "open" })) : this;
+    const stilus = document.createElement("style");
+    stilus.textContent = `
+      ha-card { padding: 12px 8px 8px; }
+      ha-card.nincs-fej { padding: 6px 8px 8px; }
+      .fej { display:flex; align-items:center; gap:10px; padding: 0 10px 8px; }
+      .fej .cim { font-size: 1.05rem; font-weight: 600; color: var(--primary-text-color); flex: 1; }
+      .fej .szam { font-size: 1.35rem; font-weight: 700; color: var(--primary-text-color); }
+      .fej .alcim { font-size: .82rem; color: var(--secondary-text-color); }
+      .sor { display:flex; align-items:center; gap:12px; padding: 10px 10px; border-radius: 10px; cursor: pointer; }
+      .sor:hover { background: var(--secondary-background-color); }
+      .sor ha-icon { --mdc-icon-size: 26px; flex: none; }
+      .szoveg { min-width: 0; flex: 1; }
+      .cim1 { font-size: .95rem; color: var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .cim2 { font-size: .78rem; color: var(--secondary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .kesz .cim1 { color: var(--secondary-text-color); text-decoration: line-through; }
+      .ures { padding: 14px 12px; color: var(--secondary-text-color); font-size: .9rem; }
+    `;
+    const kartya = document.createElement("ha-card");
+    const fej = document.createElement("div");
+    fej.className = "fej";
+    this._fejDoboz = fej;
+    this._fejIkon = document.createElement("ha-icon");
+    this._fejSzam = document.createElement("div");
+    this._fejSzam.className = "szam";
+    fej.appendChild(this._fejIkon);
+    const fejSzoveg = document.createElement("div");
+    fejSzoveg.className = "cim";
+    this._fejFo = document.createElement("div");
+    this._fejAlcim = document.createElement("div");
+    this._fejAlcim.className = "alcim";
+    fejSzoveg.appendChild(this._fejFo);
+    fejSzoveg.appendChild(this._fejAlcim);
+    fej.appendChild(fejSzoveg);
+    fej.appendChild(this._fejSzam);
+    this._sorokDoboz = document.createElement("div");
+    kartya.appendChild(fej);
+    kartya.appendChild(this._sorokDoboz);
+    arnyek.appendChild(stilus);
+    arnyek.appendChild(kartya);
+    this._keret = kartya;
+  }
+
+  _fejlec(sorok) {
+    const kesz = sorok.filter((r) => this._vartKesz(r)).length;
+    const cim = (this._config && this._config.title) || "Mai etetés";
+    if (this._fejFo.textContent !== cim) this._fejFo.textContent = cim;
+    const szam = kesz + " / " + sorok.length;
+    if (this._fejSzam.textContent !== szam) this._fejSzam.textContent = szam;
+    const alcim = sorok.length
+      ? (kesz === sorok.length ? "mindet megkapta" : (sorok.length - kesz) + " van hátra")
+      : "";
+    if (this._fejAlcim.textContent !== alcim) this._fejAlcim.textContent = alcim;
+    const ikon = (sorok.length && kesz === sorok.length) ? "mdi:check-decagram" : "mdi:bowl-mix-outline";
+    if (this._fejIkon.getAttribute("icon") !== ikon) this._fejIkon.setAttribute("icon", ikon);
+    this._fejIkon.style.color = (sorok.length && kesz === sorok.length) ? "var(--success-color)" : "var(--state-icon-color)";
+  }
+
+  _kulcs(r) { return String(r.feeding) + "#" + String(r.alkalom || 1); }
+
+  /* A szerver az etetes idejet NYERS UTC belyegkent kuldi ("2026-09-21 04:42:15.727Z"), nem
+     ora:perc alakban, mint az adagoknal. Ha ezt kiirnank, a fali tablan a teljes belyeg allna,
+     ket oraval korabbi orakkal. Itt valtjuk at helyi ora:percre. A szokoz T-re cserelese nem
+     szepitkezes: szokozzel a belyeget nem minden bongeszo parseolja. */
+  _ora(iso) {
+    const sz = String(iso || "").trim();
+    if (!sz) return "";
+    const d = new Date(sz.replace(" ", "T"));
+    if (isNaN(d.getTime())) return "";
+    const p = (n) => (n < 10 ? "0" : "") + n;
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  /* A koppintas AZONNAL latszik, meg mielott a szerver valaszolna. Amint a szenzor ugyanazt
+     mondja, a varakozo bejegyzes torlodik. */
+  _vartKesz(r) {
+    const k = this._kulcs(r);
+    if (this._varakozo.has(k)) {
+      const vart = this._varakozo.get(k);
+      if (!!r.done === vart) { this._varakozo.delete(k); return !!r.done; }
+      return vart;
+    }
+    return !!r.done;
+  }
+
+  _lista(sorok) {
+    const mutat = this._config && this._config.hide_done
+      ? sorok.filter((r) => !this._vartKesz(r))
+      : sorok;
+    const kulcsok = mutat.map((r) => this._kulcs(r));
+    const ujjlenyomat = kulcsok.join(",");
+    if (ujjlenyomat !== this._utolso) {
+      this._utolso = ujjlenyomat;
+      const kell = new Set(kulcsok);
+      for (const [k, sor] of this._sorok) {
+        if (!kell.has(k)) { sor.gyoker.remove(); this._sorok.delete(k); }
+      }
+      let elozo = null;
+      for (const k of kulcsok) {
+        let sor = this._sorok.get(k);
+        if (!sor) { sor = this._sorLetrehoz(k); this._sorok.set(k, sor); }
+        const utan = elozo ? elozo.nextSibling : this._sorokDoboz.firstChild;
+        if (utan !== sor.gyoker) this._sorokDoboz.insertBefore(sor.gyoker, utan);
+        elozo = sor.gyoker;
+      }
+      const ures = this._sorokDoboz.querySelector(".ures");
+      if (ures && kulcsok.length) ures.remove();
+      if (!kulcsok.length && !ures) {
+        const p = document.createElement("div");
+        p.className = "ures";
+        p.textContent = sorok.length ? "Mára minden etetés megvan." : "Mára nincs beütemezett etetés.";
+        this._sorokDoboz.appendChild(p);
+      }
+    }
+    for (const r of mutat) this._sorFrissit(this._sorok.get(this._kulcs(r)), r);
+  }
+
+  _sorLetrehoz(kulcs) {
+    const gyoker = document.createElement("div");
+    gyoker.className = "sor";
+    const ikon = document.createElement("ha-icon");
+    const szoveg = document.createElement("div");
+    szoveg.className = "szoveg";
+    const cim = document.createElement("div");
+    cim.className = "cim1";
+    const alcim = document.createElement("div");
+    alcim.className = "cim2";
+    szoveg.appendChild(cim);
+    szoveg.appendChild(alcim);
+    gyoker.appendChild(ikon);
+    gyoker.appendChild(szoveg);
+    gyoker.addEventListener("click", () => this._koppint(kulcs));
+    return { gyoker, ikon, cim, alcim };
+  }
+
+  _sorFrissit(sor, r) {
+    if (!sor) return;
+    const kesz = this._vartKesz(r);
+    const ikon = kesz ? "mdi:check-circle" : "mdi:circle-outline";
+    if (sor.ikon.getAttribute("icon") !== ikon) sor.ikon.setAttribute("icon", ikon);
+    const szin = kesz ? "var(--success-color)" : "var(--state-icon-color)";
+    if (sor.ikon.style.color !== szin) sor.ikon.style.color = szin;
+    // Az alkalom sorszama a CIMBE kerul, es csak akkor, ha napi tobb van belole. Az alcimben
+    // allva a mar megetetett sor nem mondana sorszamot (ott a "megetette ..." all), es ket
+    // egyforma nevu sor kozott nem lehetne eldonteni, melyik a reggeli -- pontosan azon a
+    // fali tablan nem, amire keszult. Napi egy etetesnel az "1." csak zaj lenne.
+    const db = parseInt(r.of, 10) || 1;
+    const sorszam = db > 1 ? (r.alkalom + ". ") : "";
+    const cim = sorszam + [r.pet_name, r.name].filter(Boolean).join("  ·  ");
+    if (sor.cim.textContent !== cim) sor.cim.textContent = cim;
+    const alcim = kesz
+      ? ["megetette", this._ora(r.at), r.by ? "· " + r.by : ""].filter(Boolean).join(" ")
+      : (r.amount || "");
+    if (sor.alcim.textContent !== alcim) sor.alcim.textContent = alcim;
+    const osztaly = "sor" + (kesz ? " kesz" : "");
+    if (sor.gyoker.className !== osztaly) sor.gyoker.className = osztaly;
+  }
+
+  _koppint(kulcs) {
+    const allapot = this._allapot();
+    if (!allapot || !this._hass) return;
+    const sorok = (allapot.attributes && allapot.attributes.rows) || [];
+    const r = sorok.find((x) => this._kulcs(x) === kulcs);
+    if (!r) return;
+    const uj = !this._vartKesz(r);
+    this._varakozo.set(kulcs, uj);
+    this._sorFrissit(this._sorok.get(kulcs), r);   // azonnali visszajelzes
+    if (!this._config.hide_header) this._fejlec(sorok);
+    this._hass.callService("bogancs", "feed", {
+      feeding: r.feeding,
+      alkalom: parseInt(r.alkalom, 10) || 1,
+      fed: uj,
+      by: (this._config && this._config.by) || "Home Assistant",
+    }).catch(() => {
+      // Ha a mentes elszall, NE maradjon hamis pipa a kepernyon.
+      this._varakozo.delete(kulcs);
+      this._sorFrissit(this._sorok.get(kulcs), r);
+    });
+  }
+}
+
+/* A regisztracio ugyanugy megy, mint az adag-kartyanal: feltetel nelkul, tobbszor
+   visszaellenorizve. Az indok a fajl elejen, a `bogancsRegisztral` fuggvenynel all -- egy masik
+   HACS-kartya menet kozben lecserelheti a `window.customElements` objektumot, es amit a csere
+   elott definialtunk, az eltunik. */
+function bogancsEtetesRegisztral() {
+  try {
+    if (!customElements.get(ETETES_KARTYA)) customElements.define(ETETES_KARTYA, class extends BogancsFeedsCard {});
+  } catch (e) {
+    // Mar definialva ebben a nyilvantartasban: ez rendben van.
+  }
+}
+bogancsEtetesRegisztral();
+[0, 50, 200, 800, 2000, 5000].forEach((ms) => setTimeout(bogancsEtetesRegisztral, ms));
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bogancsEtetesRegisztral);
+}
+window.addEventListener("load", bogancsEtetesRegisztral);
+
+if (!window.customCards.some((c) => c.type === ETETES_KARTYA)) {
+  window.customCards.push({
+    type: ETETES_KARTYA,
+    name: "Bogáncs – Mai etetés",
+    description: "A mai etetések listája, koppintásra pipálható. Az integrációval együtt érkezik.",
+    preview: false,
+  });
+}

@@ -11,6 +11,45 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.6.0 (2026-09-21)
+
+**Az etetés kikerülhet a vezérlőpultra: saját kártya és szolgáltatás**
+
+Az etetés-entitások az előző kiadásban megjelentek, de listaként csak a gyógyszereket lehetett
+kirakni. Most az etetésnek is van saját kártyája, *Bogáncs – Mai etetés* néven, ugyanazzal a
+viselkedéssel: soronként frissül, koppintásra pipálható és visszavonható, és a pipa azonnal
+látszik, nem csak a következő lekérdezés után.
+
+Két dolog szándékosan más, mint az adagoknál. Az etetésnek nincs időpontja, csak napi sorszáma,
+ezért nincs „késésben" állapot sem: ami nincs kipipálva, az hátravan. És nincs harmadik állapot
+(kimaradt), tehát a sornak nincs külön kihagyás-gombja.
+
+Ehhez jött a `bogancs.feed` szolgáltatás is, hogy automatizálásból (például egy automata etető
+jelzésére) is be lehessen jegyezni az etetést. A szolgáltatás csak ahhoz a családhoz szól,
+amelyiknél a sor tényleg létezik: két felvett család esetén a másiknak küldött kérés hibával
+szállna el, pedig az etetés rögzült.
+
+A kártya `by` beállítása (ki írja be a naplóba) a kisállatkönyv **következő kiadásától** hat.
+Addig minden Home Assistantből jövő etetés *Home Assistant* néven kerül a naplóba, akkor is, ha
+a kártyán más nevet adsz meg. A gyógyszeradagnál ez már eddig is működött.
+
+---
+
+## v1.5.0 (2026-09-20)
+
+**Új: etetés**
+
+A napi etetés ugyanúgy bekerült, ahogy a gyógyszerezés. Egy új szenzor mondja meg, hány etetés
+van még ma hátra (a teljes napi lista a `rows` attribútumban utazik, hogy egy kártya ne kérdezzen
+újra), és minden napi etetési alkalomhoz tartozik egy kapcsoló.
+
+Kapcsoló és nem gomb, ugyanazért, mint az adagnál: a gomb sosem mutatná, megtörtént-e már.
+
+Ha a család kikapcsolja az Etetés modult, a kapcsolók „nem elérhető" állásba mennek, nem
+„ki"-be – az úgy nézne ki, mintha elfelejtettek volna etetni.
+
+---
+
 ## v1.4.3 (2026-09-18)
 
 **Javítva: a kihagyás gombja felkiáltójel volt, nem áthúzott gyógyszer**

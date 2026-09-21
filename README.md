@@ -16,12 +16,17 @@ az appban generálsz.
 | `sensor.<család>_kesesben` | hány adag csúszott már el |
 | `sensor.<család>_kovetkezo_adag` | a következő adag időpontja, attribútumban az állat és a gyógyszer |
 | `sensor.<család>_napi_rutin` | a napi teendők száma, a szövegek az `items` attribútumban |
+| `sensor.<család>_hatralevo_etetes` | hány etetés van még ma hátra. A teljes napi lista a `rows` attribútumban |
 
 **Kapcsolók**
 
 Minden beütemezett adaghoz egy kapcsoló: bekapcsolva = beadva, kikapcsolva = még nem.
 A visszakapcsolás visszavonja a beadást, ugyanúgy, mint az appban. A kapcsoló attribútumai
 megmondják, ki és mikor adta be.
+
+Ugyanez az etetésekre: minden napi etetési alkalomhoz egy kapcsoló. Ha a táphoz napi több
+alkalom tartozik, a kapcsoló neve a sorszámot is mondja, különben két egyforma kapcsoló állna
+egymás mellett, és a fali tableten nem lehetne eldönteni, melyik a reggeli.
 
 **Kártya**
 
@@ -45,9 +50,28 @@ type: custom:bogancs-doses
 | `hide_given` | `true` esetén a már beadott adagok kimaradnak |
 | `by` | ez a név kerül a naplóba a beadás mellé (alapból *Home Assistant*) |
 
+A *Bogáncs – Mai etetés* kártya ugyanígy működik, csak az etetésekre:
+
+```yaml
+type: custom:bogancs-feeds
+```
+
+| Opció | Mit csinál |
+|---|---|
+| `entity` | melyik etetés-szenzort olvassa. Elhagyható: magától megtalálja |
+| `title` | a kártya címe (alapból *Mai etetés*) |
+| `hide_header` | `true` esetén csak a lista látszik, fejléc nélkül |
+| `hide_done` | `true` esetén a már megetetett sorok kimaradnak |
+| `by` | ez a név kerül a naplóba (alapból *Home Assistant*) |
+
+Az etetésnek nincs időpontja, csak napi sorszáma, ezért késés sincs: ami nincs kipipálva, az
+egyszerűen hátravan.
+
 **Szolgáltatás**
 
 `bogancs.dose` – automatizálásból jelölhetsz be egy adagot, vagy vonhatsz vissza egyet.
+
+`bogancs.feed` – ugyanez az etetésre: a táp azonosítója és a napi alkalom sorszáma kell hozzá.
 
 ## Telepítés HACS-ból
 

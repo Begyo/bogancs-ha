@@ -15,7 +15,10 @@ from homeassistant.loader import async_get_integration
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
+    ATTR_ALKALOM,
     ATTR_BY,
+    ATTR_FED,
+    ATTR_FEEDING,
     ATTR_GIVEN,
     ATTR_MEDICATION,
     ATTR_SCHEDULED,
@@ -26,6 +29,7 @@ from .const import (
     ATTR_MISSED,
     ATTR_REASON,
     SERVICE_DOSE,
+    SERVICE_FEED,
 )
 from .coordinator import BogancsAuthError, BogancsCoordinator
 
@@ -49,6 +53,17 @@ DOSE_SCHEMA = vol.Schema(
         # adagrol van szo, csak a harmadik allapotaban.
         vol.Optional(ATTR_MISSED, default=False): cv.boolean,
         vol.Optional(ATTR_REASON, default=""): cv.string,
+    }
+)
+
+# ETETES (Begyo kerese 2026-09-21, jegy #40). Kulon szolgaltatas es nem a `dose` bovitese:
+# mas az azonositoja (tap + napi alkalom, nem gyogyszer + idopont), es nincs harmadik allapota.
+FEED_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_FEEDING): cv.string,
+        vol.Optional(ATTR_ALKALOM, default=1): vol.All(vol.Coerce(int), vol.Range(min=1)),
+        vol.Optional(ATTR_FED, default=True): cv.boolean,
+        vol.Optional(ATTR_BY, default="Home Assistant"): cv.string,
     }
 )
 
@@ -106,8 +121,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 missed=call.data.get(ATTR_MISSED, False),
             )
 
+    async def _feed(call: ServiceCall) -> None:
+        """Etetes megjelolese automatizalasbol vagy a sajat kartyarol.
+
+        A `dose`-zal ellentetben ez CSAK ahhoz a csaladhoz megy, amelyiknel a sor tenylegesen
+        letezik. Ket felvett csalad eseten a masiknak kuldott keres 404-gyel szallna el, es a
+        hibat a hivo latna -- pedig az etetes rogzult.
+        """
+        feeding = call.data[ATTR_FEEDING]
+        alkalom = call.data.get(ATTR_ALKALOM, 1)
+        for coord in hass.data.get(DOMAIN, {}).values():
+            blokk = (coord.data or {}).get("feeding") or {}
+            for row in blokk.get("rows", []):
+                if str(row.get("feeding")) == feeding and int(row.get("alkalom") or 0) == alkalom:
+                    await coord.async_set_feed(
+                        feeding,
+                        alkalom,
+                        call.data.get(ATTR_FED, True),
+                        call.data.get(ATTR_BY, "Home Assistant"),
+                    )
+                    return
+
     if not hass.services.has_service(DOMAIN, SERVICE_DOSE):
         hass.services.async_register(DOMAIN, SERVICE_DOSE, _dose, schema=DOSE_SCHEMA)
+    if not hass.services.has_service(DOMAIN, SERVICE_FEED):
+        hass.services.async_register(DOMAIN, SERVICE_FEED, _feed, schema=FEED_SCHEMA)
 
     return True
 
@@ -119,4 +157,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_DOSE)
+            hass.services.async_remove(DOMAIN, SERVICE_FEED)
     return unloaded

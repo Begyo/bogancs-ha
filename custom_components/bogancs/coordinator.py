@@ -119,7 +119,9 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._patch_dose(medication, scheduled, given, valasz, missed)
         await self.async_request_refresh()
 
-    async def async_set_feed(self, feeding: str, alkalom: int, fed: bool) -> None:
+    async def async_set_feed(
+        self, feeding: str, alkalom: int, fed: bool, by: str = "Home Assistant"
+    ) -> None:
         """Etetes bejegyzese vagy visszavonasa (Begyo kerese 2026-09-20).
 
         Ugyanaz a felepites, mint az adagnal, es ugyanazert: a coordinator tiz masodpercig
@@ -127,7 +129,7 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         latszananak. A gyorstarat tehat HELYBEN is atallitjuk, a rendes lekerdezes meg
         egy percen belul ugyis osszeegyezteti.
         """
-        body = {"feeding": feeding, "alkalom": alkalom}
+        body = {"feeding": feeding, "alkalom": alkalom, "by": by}
         if not fed:
             body["undo"] = True
         try:
@@ -144,10 +146,12 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     raise UpdateFailed(f"HTTP {resp.status}: {text[:120]}")
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"connection failed: {err}") from err
-        self._patch_feed(feeding, alkalom, fed)
+        self._patch_feed(feeding, alkalom, fed, by)
         await self.async_request_refresh()
 
-    def _patch_feed(self, feeding: str, alkalom: int, fed: bool) -> None:
+    def _patch_feed(
+        self, feeding: str, alkalom: int, fed: bool, by: str = "Home Assistant"
+    ) -> None:
         """Egy etetes-sor atallitasa a gyorstarban, az osszesitessel egyutt."""
         data = self.data
         if not isinstance(data, dict):
@@ -160,7 +164,7 @@ class BogancsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if bool(row.get("done")) == fed:
                     return
                 row["done"] = fed
-                row["by"] = "Home Assistant" if fed else ""
+                row["by"] = (by or "Home Assistant") if fed else ""
                 break
         else:
             return

@@ -27,4 +27,9 @@ ATTR_BY = "by"
 ATTR_MISSED = "missed"
 ATTR_REASON = "reason"
 
+ATTR_FEEDING = "feeding"
+ATTR_ALKALOM = "alkalom"
+ATTR_FED = "fed"
+
 SERVICE_DOSE = "dose"
+SERVICE_FEED = "feed"
