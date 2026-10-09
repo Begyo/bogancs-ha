@@ -11,6 +11,23 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.8.0 (2026-10-10)
+
+**Új: gyógyszer-időzítés a vezérlőpult kártyáján**
+
+- A gyógyszer sora mutatja, ha evéshez kötött, például: „1 tabletta · evés előtt 30 perccel”.
+- Ha a gyógyszernél távolság-szabály van („B után legalább 15 perccel”), és a beadás most
+  sértené, a koppintás nem rögzít azonnal. A sorban megjelenik a figyelmeztetés, és két gomb:
+  **Mégse** és **Mégis beadtam**. Felugró ablak helyett a soron belül, mert a kioszkon a
+  felugró ablak nem megbízható.
+- A figyelmeztetés magától lejár, amikor a szabály már nem sérül.
+- Régebbi Bogáncs-kiszolgálóval minden marad a régiben. Az automatizmusok (`bogancs.dose`
+  szolgáltatás) továbbra is figyelmeztetés nélkül rögzítenek.
+
+Bogáncs app: 2.20.0 vagy újabb kell hozzá.
+
+---
+
 ## v1.7.1 (2026-09-21)
 
 **Javítva: a kihagyás-gomb régi kiszolgálón is megjelent volna**

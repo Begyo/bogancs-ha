@@ -105,6 +105,13 @@ class BogancsDosesCard extends HTMLElement {
       .kihagy { --mdc-icon-size: 20px; flex: none; border: none; background: none; cursor: pointer;
                 color: var(--secondary-text-color); padding: 4px; border-radius: 8px; }
       .kihagy:hover { background: var(--secondary-background-color); color: var(--warning-color, #e8a33d); }
+      /* #64: tavolsag-szabaly figyelmeztetes a soron belul (felugro ablak a kioszkon nem megbizhato) */
+      .figy { margin-top: 8px; padding: 8px 10px; border-radius: 8px; white-space: pre-line; font-size: .85rem;
+        background: color-mix(in srgb, var(--warning-color, #e8a33d) 16%, transparent); cursor: default; }
+      .figy .gombok { display:flex; gap: 8px; margin-top: 8px; }
+      .figy button { flex: 1; border: none; border-radius: 8px; padding: 8px; font: inherit; font-weight: 600; cursor: pointer;
+        background: var(--secondary-background-color); color: var(--primary-text-color); }
+      .figy button.megis { background: var(--warning-color, #e8a33d); color: #fff; }
       .ures { padding: 14px 12px; color: var(--secondary-text-color); font-size: .9rem; }
     `;
     const kartya = document.createElement("ha-card");
@@ -236,6 +243,27 @@ class BogancsDosesCard extends HTMLElement {
     alcim.className = "cim2";
     szoveg.appendChild(cim);
     szoveg.appendChild(alcim);
+    // #64: a figyelmeztetes es a ket gomb. Alapbol rejtve; a koppintasra nyilik, ha a
+    // szerver szerint a beadas most serti a tavolsag-szabalyt.
+    const figy = document.createElement("div");
+    figy.className = "figy";
+    figy.style.display = "none";
+    const figySzoveg = document.createElement("div");
+    const gombok = document.createElement("div");
+    gombok.className = "gombok";
+    const megse = document.createElement("button");
+    megse.textContent = "Mégse";
+    const megis = document.createElement("button");
+    megis.className = "megis";
+    megis.textContent = "Mégis beadtam";
+    gombok.appendChild(megse);
+    gombok.appendChild(megis);
+    figy.appendChild(figySzoveg);
+    figy.appendChild(gombok);
+    figy.addEventListener("click", (ev) => ev.stopPropagation());
+    megse.addEventListener("click", (ev) => { ev.stopPropagation(); figy.style.display = "none"; });
+    megis.addEventListener("click", (ev) => { ev.stopPropagation(); figy.style.display = "none"; this._koppint(kulcs, true); });
+    szoveg.appendChild(figy);
     // A kimaradasnak SAJAT celpontja van, nem a sorra koppintas: a sor beadast rogzit, a
     // ketto nem fer el ugyanazon a helyen (ugyanez a dontes az appban is).
     const kihagy = document.createElement("ha-icon");
@@ -250,7 +278,7 @@ class BogancsDosesCard extends HTMLElement {
     gyoker.appendChild(szoveg);
     gyoker.appendChild(kihagy);
     gyoker.addEventListener("click", () => this._koppint(kulcs));
-    return { gyoker, ikon, cim, alcim, kihagy };
+    return { gyoker, ikon, cim, alcim, kihagy, figy, figySzoveg };
   }
 
   _sorFrissit(sor, d) {
@@ -272,7 +300,7 @@ class BogancsDosesCard extends HTMLElement {
       ? ["kimaradt", d.miss_reason ? "· " + d.miss_reason : "", d.given_by ? "· " + d.given_by : ""].filter(Boolean).join(" ")
       : (kesz
         ? ["megkapta", d.given_at || "", d.given_by ? "· " + d.given_by : ""].filter(Boolean).join(" ")
-        : (d.dose || ""));
+        : [d.dose || "", d.timing || ""].filter(Boolean).join(" · "));
     if (sor.alcim.textContent !== alcim) sor.alcim.textContent = alcim;
     if (sor.kihagy) sor.kihagy.style.display = (kimaradt || !this._tamogatKimaradt) ? "none" : "";
     const osztaly = "sor" + (kesz ? " kesz" : "") + (kesik ? " kesik" : "") + (kimaradt ? " kimaradt" : "");
@@ -302,13 +330,24 @@ class BogancsDosesCard extends HTMLElement {
     });
   }
 
-  _koppint(kulcs) {
+  _koppint(kulcs, megerositve) {
     const allapot = this._allapot();
     if (!allapot || !this._hass) return;
     const adagok = (allapot.attributes && allapot.attributes.doses) || [];
     const d = adagok.find((x) => this._kulcs(x) === kulcs);
     if (!d) return;
     const uj = !this._vartGiven(d);
+    // #64: tavolsag-szabaly. Csak FIGYELMEZTET (Begyo dontese): a "Megis beadtam" rogzit.
+    // A `warn_until` utan a szabaly mar nem serul, akkor sem, ha a szenzor meg nem frissult.
+    // A regi kiszolgalo nem kuld `warn` mezot: akkor minden marad a regiben.
+    if (uj && !megerositve && d.warn && (d.warn_until === null || d.warn_until === undefined || Date.now() < d.warn_until)) {
+      const sor = this._sorok.get(kulcs);
+      if (sor && sor.figy) {
+        sor.figySzoveg.textContent = d.warn;
+        sor.figy.style.display = "";
+        return;
+      }
+    }
     this._varakozo.set(kulcs, uj);
     // Ha kimaradtkent allt, a beadas JAVITJA (a szerver is igy kezeli), tehat a kepernyon
     // sem maradhat ott a kimaradas.
