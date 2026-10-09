@@ -24,7 +24,7 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 - Régebbi Bogáncs-kiszolgálóval minden marad a régiben. Az automatizmusok (`bogancs.dose`
   szolgáltatás) továbbra is figyelmeztetés nélkül rögzítenek.
 
-Bogáncs app: 2.20.0 vagy újabb kell hozzá.
+A Bogáncs-kiszolgálónak is ismernie kell (a vele egy éjszakán kiadott verziótól).
 
 ---
 
