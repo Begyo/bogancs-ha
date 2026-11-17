@@ -11,6 +11,19 @@ frissítési kártyáján a verziószám és a „kiadási megjegyzések” hiva
 
 ---
 
+## v1.8.1 (2026-11-18)
+
+**Javítás: az eltolt gyógyszer időpontja a vezérlőpulton**
+
+- Ha egy gyógyszernél távolság-szabály van (például „Azopt után legalább 5 perccel”), az
+  appban és a nyomtatott listán eddig is az eltolt időpont látszott (23:05), a vezérlőpulton
+  viszont a gyógyszer saját beállított ideje (23:00). Mostantól a kártya, a kapcsolók neve és
+  a „következő adag” szenzor is az eltolt időpontot mutatja, ugyanazt, amit az app.
+- A pipálás változatlan: a már rögzített adagok nem sérülnek, és a kapcsolók azonosítói is
+  maradnak, tehát az automatizmusok és a vezérlőpult kártyái nem változnak.
+
+---
+
 ## v1.8.0 (2026-10-10)
 
 **Új: gyógyszer-időzítés a vezérlőpult kártyáján**

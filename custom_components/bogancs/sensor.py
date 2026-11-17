@@ -35,7 +35,11 @@ class BogancsSensorDescription(SensorEntityDescription):
 
 def _next_value(data: dict[str, Any]) -> Any:
     nxt = data.get("next")
-    return nxt.get("scheduled") if isinstance(nxt, dict) else None
+    if not isinstance(nxt, dict):
+        return None
+    # A tavolsag-szabaly eltolhatja a kiirando idot (pl. 23:00 -> 23:05); a szenzor azt
+    # mutatja, ami az appban es a kartyan is all.
+    return nxt.get("kiirt") or nxt.get("scheduled")
 
 
 def _next_extra(data: dict[str, Any]) -> dict[str, Any]:

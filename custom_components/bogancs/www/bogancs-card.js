@@ -292,7 +292,9 @@ class BogancsDosesCard extends HTMLElement {
     const szin = kimaradt ? "var(--warning-color, #e8a33d)"
       : (kesz ? "var(--success-color)" : (kesik ? "var(--error-color)" : "var(--state-icon-color)"));
     if (sor.ikon.style.color !== szin) sor.ikon.style.color = szin;
-    const cim = [d.scheduled, d.pet, d.med].filter(Boolean).join("  ·  ");
+    // A kiirando ido (eltolas-szabalynal eltolt), de a sor KULCSA es a kesesszamitas
+    // marad a `scheduled`-on, igy a fejlec szamai es a sor szine nem csusznak szet.
+    const cim = [d.kiirt || d.scheduled, d.pet, d.med].filter(Boolean).join("  ·  ");
     if (sor.cim.textContent !== cim) sor.cim.textContent = cim;
     // A kimaradasnal nem "megkapta" all, hanem hogy KIMARADT, es ki rogzitette. Ez a ket
     // mondat nem cserelheto fel: az egyik szerint az allat megkapta a gyogyszert.

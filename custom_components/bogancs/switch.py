@@ -69,8 +69,11 @@ class BogancsDoseSwitch(CoordinatorEntity[BogancsCoordinator], SwitchEntity):
         self._medication = str(row.get("medication") or "")
         self._scheduled = str(row.get("scheduled") or "")
         self._attr_unique_id = f"{entry.entry_id}_{self._medication}_{self._scheduled}"
+        # A NEVBEN a kiirando ido all (eltolas-szabaly eseten pl. 23:05), de az azonosito
+        # es a sor-kereses tovabbra is a `scheduled` (az a pipalas kulcsa a szerveren).
+        kiirt = str(row.get("kiirt") or "") or self._scheduled
         self._attr_name = (
-            f"{row.get('pet', '')} – {row.get('med', '')} {self._scheduled}".strip()
+            f"{row.get('pet', '')} – {row.get('med', '')} {kiirt}".strip()
         )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
